@@ -1,0 +1,801 @@
+/* ==========================================================
+   Certification - A4, bilingual
+   Dimensions taken from the reference PDF (all in mm).
+
+   VERTICAL BUDGET (must sum to 297mm):
+     header ............ 61.348
+     grid (20 tiers + 19 gaps) 194.522   = 20*7.923 + 19*1.898
+     disclaimer region . 26.757 (text vertically centred)
+     ribbon ............ 14.373   (print: pinned to the bottom edge of the paper)
+     --------------------------------
+     below last tier = 26.757 + 14.373 = 41.13mm
+   ========================================================== */
+
+:root {
+  --green:   #009668;
+  --border:  #939598;   /* CMYK C0 M0 Y0 K60: every outline stroke */
+  --text:    #1f2937;
+  --muted:   #4b5563;
+  --danger:  #d93025;
+  --text-gray:  #727376;   /* company name (EN) + disclaimer (EN) */
+  --text-green: #0D9A70;   /* company name (AR) + disclaimer (AR) */
+
+  /* Badge font: DIN Next LT Arabic Bold (licensed font: must be installed or self-hosted, see @font-face) */
+  --font-din-en: 'DIN Next LT Arabic', 'DIN Alternate', 'Bahnschrift', 'Inter', sans-serif;
+  --font-din-ar: 'DIN Next LT Arabic', 'Cairo', sans-serif;
+
+  /* Row geometry */
+  --row-w:     196.85mm;
+  --tier-h:    7.923mm;
+  --gap:       1.898mm;                 /* between tiers AND between blocks */
+  --col-badge: 54.224mm;
+  --col-mid:   44.201mm;                /* 54.224 + 44.201 + 44.201 + 54.224 = 196.85 */
+  --pad-x:     calc((210mm - var(--row-w)) / 2);   /* 6.575mm */
+  --name-ar-size: 7.785pt;                 /* Arabic name text size (English name = 13.7pt) */
+
+  /* Vertical budget */
+  --header-h:  61.348mm;
+  --grid-h:    calc(20 * var(--tier-h) + 19 * var(--gap));   /* 194.522mm */
+  --note-h:    26.786mm;   /* 41.13 - ribbon-h (keeps the vertical budget at 297mm) */
+  /* Badge text lift (bottom padding; text moves up by HALF of this value).
+     Measured from the "Passport number" screenshot: cap-height centre was 0.415mm too low -> 0.3 + 2 x 0.415 = ~1.13mm.
+     Text still low -> increase; too high -> decrease. EN and AR can be tuned separately. */
+  --badge-pb-en: 1.15mm;
+  --badge-pb-ar: 1.15mm;
+  --note-ar-w: 100mm;                  /* Arabic disclaimer box width (2 lines @ 9pt). Wider = fewer lines; right edge stays fixed */
+  --ribbon-h:  14.344mm;   /* reference banner: 209.711 x 14.344mm */
+
+  /* Header objects */
+  --photo-top: 15.44mm;
+  --title-cx:  110.35mm;                /* horizontal centre of both titles */
+}
+
+/* DIN Next LT Arabic Bold.
+   1) local(): works on any computer where the font is installed (your PC -> print/PDF is correct).
+   2) url(): for visitors on Netlify/GitHub Pages the font must be uploaded to /fonts/
+      (only if your font licence allows web embedding). Missing files are skipped silently,
+      the fallback stack in --font-din-en / --font-din-ar is used instead. */
+@font-face {
+  font-family: 'DIN Next LT Arabic';
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: local('DIN Next LT Arabic Bold'),
+       local('DINNextLTArabic-Bold'),
+       url('fonts/DINNextLTArabic-Bold.woff2') format('woff2'),
+       url('fonts/DINNextLTArabic-Bold.ttf') format('truetype'),
+       url('fonts/DINNextLTArabic-Bold.otf') format('opentype');
+}
+
+/* Footer ribbon text: Arial / Helvetica REGULAR.
+   Put your font file in ./fonts/ named Helvetica-Regular.(woff2|ttf|otf)  or  Arial-Regular.(woff2|ttf|otf).
+   Missing files are skipped silently; the fallback stack (Arial ...) is used instead. */
+@font-face {
+  font-family: 'Ribbon Helvetica';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: local('Helvetica Regular'), local('Helvetica'), local('Helvetica-Regular'),
+       url('fonts/Helvetica-Regular.woff2') format('woff2'),
+       url('fonts/Helvetica-Regular.ttf') format('truetype'),
+       url('fonts/Helvetica-Regular.otf') format('opentype'),
+       local('Arial'), local('ArialMT'),
+       url('fonts/Arial-Regular.woff2') format('woff2'),
+       url('fonts/Arial-Regular.ttf') format('truetype'),
+       url('fonts/Arial-Regular.otf') format('opentype');
+}
+
+/* ===== Self-hosted free fonts (SIL OFL, see fonts/licenses/). Files live in ./fonts/ ===== */
+
+@font-face {
+  font-family: 'Cairo';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('fonts/cairo-arabic-600-normal.woff2') format('woff2');
+  unicode-range: U+0600-06FF,U+0750-077F,U+0870-088E,U+0890-0891,U+0897-08E1,U+08E3-08FF,U+200C-200E,U+2010-2011,U+204F,U+2E41,U+FB50-FDFF,U+FE70-FE74,U+FE76-FEFC,U+102E0-102FB,U+10E60-10E7E,U+10EC2-10EC4,U+10EFC-10EFF,U+1EE00-1EE03,U+1EE05-1EE1F,U+1EE21-1EE22,U+1EE24,U+1EE27,U+1EE29-1EE32,U+1EE34-1EE37,U+1EE39,U+1EE3B,U+1EE42,U+1EE47,U+1EE49,U+1EE4B,U+1EE4D-1EE4F,U+1EE51-1EE52,U+1EE54,U+1EE57,U+1EE59,U+1EE5B,U+1EE5D,U+1EE5F,U+1EE61-1EE62,U+1EE64,U+1EE67-1EE6A,U+1EE6C-1EE72,U+1EE74-1EE77,U+1EE79-1EE7C,U+1EE7E,U+1EE80-1EE89,U+1EE8B-1EE9B,U+1EEA1-1EEA3,U+1EEA5-1EEA9,U+1EEAB-1EEBB,U+1EEF0-1EEF1;
+}
+
+@font-face {
+  font-family: 'Cairo';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('fonts/cairo-latin-600-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+@font-face {
+  font-family: 'Cairo';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('fonts/cairo-arabic-700-normal.woff2') format('woff2');
+  unicode-range: U+0600-06FF,U+0750-077F,U+0870-088E,U+0890-0891,U+0897-08E1,U+08E3-08FF,U+200C-200E,U+2010-2011,U+204F,U+2E41,U+FB50-FDFF,U+FE70-FE74,U+FE76-FEFC,U+102E0-102FB,U+10E60-10E7E,U+10EC2-10EC4,U+10EFC-10EFF,U+1EE00-1EE03,U+1EE05-1EE1F,U+1EE21-1EE22,U+1EE24,U+1EE27,U+1EE29-1EE32,U+1EE34-1EE37,U+1EE39,U+1EE3B,U+1EE42,U+1EE47,U+1EE49,U+1EE4B,U+1EE4D-1EE4F,U+1EE51-1EE52,U+1EE54,U+1EE57,U+1EE59,U+1EE5B,U+1EE5D,U+1EE5F,U+1EE61-1EE62,U+1EE64,U+1EE67-1EE6A,U+1EE6C-1EE72,U+1EE74-1EE77,U+1EE79-1EE7C,U+1EE7E,U+1EE80-1EE89,U+1EE8B-1EE9B,U+1EEA1-1EEA3,U+1EEA5-1EEA9,U+1EEAB-1EEBB,U+1EEF0-1EEF1;
+}
+
+@font-face {
+  font-family: 'Cairo';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('fonts/cairo-latin-700-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('fonts/inter-latin-500-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('fonts/inter-latin-600-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('fonts/inter-latin-700-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+@font-face {
+  font-family: 'Barlow Semi Condensed';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('fonts/barlow-semi-condensed-latin-700-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+body {
+  background: #eceff1;
+  font-family: 'Inter', Arial, sans-serif;
+  color: var(--text);
+}
+
+/* ---------- Screen toolbar ---------- */
+.toolbar {
+  width: 210mm; margin: 4mm auto 0;
+  display: flex; align-items: center; justify-content: flex-end; gap: 12px;
+  font-size: 12px; color: var(--muted);
+}
+.toolbar .actions { display: inline-flex; gap: 8px; flex: none; }
+.toolbar button {
+  font: 600 12px 'Inter', Arial, sans-serif;
+  background: var(--green); color: #fff;
+  border: 0; border-radius: 4px; padding: 8px 14px; cursor: pointer;
+}
+.toolbar button#lock-btn { background: #fff; color: var(--green); box-shadow: inset 0 0 0 1px var(--green); }
+.toolbar button#lock-btn[aria-pressed="true"] { background: var(--green); color: #fff; }
+.toolbar button.ghost { background: transparent; color: var(--muted); box-shadow: inset 0 0 0 1px #c3c9cf; }
+.toolbar button:hover { filter: brightness(.93); }
+.toolbar button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+
+/* ---------- A4 page ---------- */
+.page {
+  width: 210mm;
+  min-height: 297mm;
+  max-height: 297mm;
+  margin: 4mm auto 8mm;
+  background-color: #ffffff;
+  background-image: url('assets/background.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  background-position: center;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, .15);
+}
+.content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.content > * { flex: none; }
+
+/* ---------- Modern Focus & Hover (Zero Layout Shift) ---------- */
+[contenteditable="true"] { 
+  cursor: text; 
+  border-radius: 2px; 
+}
+
+[contenteditable="true"]:hover { 
+  outline: 1.5px solid rgba(0, 150, 104, 0.45); 
+  outline-offset: -1px; 
+}
+
+[contenteditable="true"]:focus { 
+  outline: 1.5px solid var(--green); 
+  outline-offset: -1px; 
+}
+
+/* Ribbon (Bottom footer) hover */
+.ribbon [contenteditable="true"]:hover { 
+  outline: 1.5px solid rgba(255, 255, 255, 0.6); 
+  outline-offset: -1px; 
+}
+
+.ribbon [contenteditable="true"]:focus { 
+  outline: 1.5px solid #ffffff; 
+  outline-offset: -1px; 
+}
+
+/* Locked (unlockable but not unlocked): plain arrow cursor, not a text cursor */
+[data-unlockable]:not([contenteditable="true"]) { cursor: default; }
+
+/* Validation hint: screen only, never printed */
+@media screen {
+  .invalid { box-shadow: inset 0 -2px 0 var(--danger); }
+}
+
+/* ---------- Ghost placeholders (SCREEN ONLY) ----------
+   Text lives in data-placeholder, never in textContent: nothing to persist, export or print.
+   Fixed rgba, NOT a --ws-* token: .page is locked to the light theme. */
+@media screen {
+  [data-placeholder]:empty::before {
+    content: attr(data-placeholder);
+    color: rgba(0, 0, 0, .45);
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+}
+
+/* ==========================================================
+   HEADER  (61.348mm tall, objects absolutely positioned)
+   ========================================================== */
+.header {
+  position: relative;
+  width: 210mm;
+  height: var(--header-h);
+}
+
+/* Upload boxes (photo + logo): transparent taake background dots nazar aayein */
+.upload { cursor: pointer; background: transparent; }
+.upload input[type="file"] {
+  position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none;
+}
+.upload .frame {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden; position: relative;
+}
+.upload .frame img { width: 100%; height: 100%; display: block; }
+.upload .hint {
+  font-size: 10px; font-weight: 600; line-height: 1.4;
+  color: var(--muted); text-align: center; pointer-events: none;
+}
+.upload:hover { 
+  outline: 1.5px solid rgba(0, 150, 104, 0.45) !important; 
+  outline-offset: 1.5mm; 
+  border-radius: 2px;
+}
+.upload:focus-visible { outline: 2px solid var(--green); outline-offset: 1mm; }
+.upload:not(.is-empty) .hint { display: none; }
+
+/* Locked photo/logo: no click-to-upload, no hover affordance, small "Locked" pill (screen only) */
+.upload.is-locked { cursor: default; }
+.upload.is-locked:hover { outline: none; }
+@media screen {
+  .upload.is-locked::after {
+    content: "Locked";
+    position: absolute; top: 1mm; right: 1mm;
+    padding: 2px 6px;
+    border-radius: 99px;
+    background: rgba(31, 41, 55, .78);
+    color: #fff;
+    font: 600 8px/1.2 'Inter', Arial, sans-serif;
+    pointer-events: none;
+  }
+}
+
+/* Photo: outer 35.817 x 41.481mm; inner image area 27.686 x 35.306mm, centred */
+/* Photo: Outer Box (Screenshot position & size) */
+.photo {
+  position: absolute;
+  left: 8.066mm;                         /* Screenshot: 43.88mm - 35.814mm */
+  top: var(--photo-top);
+  width: 35.814mm;
+  height: 41.481mm;
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Inner Frame: Height 37.042mm, width proportional */
+.photo .frame {
+  flex: none;
+  height: 37.042mm;
+  width: auto;
+  max-width: calc(35.814mm - 2mm);        /* Outer border ke andar rahay */
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.photo .frame img {
+  height: 37.042mm !important;
+  width: auto !important;
+  max-width: 100%;
+  display: block;
+  object-fit: contain;                    /* Aspect ratio intact */
+}
+
+/* Logo: 20.587 x 31.457mm (portrait). Default image = assets/logo.png (set in index.html);
+   click / right-click still replaces it. No border once an image is present, so the PNG fills the exact box. */
+.logo {
+  position: absolute;
+  right: var(--pad-x);
+  top: var(--photo-top);
+  width: 20.587mm;
+  height: 31.457mm;
+  border: 1px dashed var(--border);
+}
+.logo .frame img { object-fit: contain; }
+.logo:not(.is-empty) { border-color: transparent; border-width: 0; }
+
+/* Titles: Arabic box 75.171 x 10.322mm | English box 97.487 x 5.359mm */
+.title .ar,
+.title .en {
+  position: absolute;
+  text-align: center;
+  white-space: nowrap;
+}
+.title .ar {
+  width: 75.171mm;
+  height: 10.322mm;
+  left: calc(var(--title-cx) - 37.5855mm);
+  top: 22.5mm;
+  font-family: var(--font-din-ar); font-weight: 700;
+  font-size: 29.355pt; line-height: 10.322mm; color: var(--text-green);
+}
+.title .en {
+  width: 97.487mm;
+  height: 7.5mm;
+  left: calc(var(--title-cx) - 48.7435mm);
+  top: 38.53mm;
+  font-family: var(--font-din-en); font-weight: 700; font-size: 21pt; letter-spacing: .5px; color: var(--text-gray);
+  line-height: 7.5mm;
+}
+
+/* ==========================================================
+   DATA GRID  (20 tiers, 7.923mm each, 1.898mm gaps)
+   ========================================================== */
+.grid {
+  width: var(--row-w);
+  height: var(--grid-h);
+  margin-left: var(--pad-x);
+  display: flex; flex-direction: column;
+  gap: var(--gap);
+}
+.block { display: contents; }          /* tiers are direct flex items: uniform 1.898mm gap */
+
+/* Tier = 4-column grid */
+.tier {
+  display: grid;
+  grid-template-columns: var(--col-badge) var(--col-mid) var(--col-mid) var(--col-badge);
+  grid-template-rows: var(--tier-h);
+  width: var(--row-w);
+  height: var(--tier-h);
+  direction: ltr;
+  background: transparent;
+  overflow: hidden;
+  position: relative;
+}
+/* Outline around the WHOLE tier, drawn as an overlay so geometry stays 196.85mm x 7.923mm. */
+.tier::after {
+  content: "";
+  position: absolute; inset: 0;
+  border: 1px solid var(--border);
+  pointer-events: none;
+}
+
+.c1 { grid-column: 1; }
+.c2 { grid-column: 2; }
+.c3 { grid-column: 3; }
+.c4 { grid-column: 4; }
+
+/* Row 4, Arabic tier: plain column-2 cell, EXACTLY like the Hijri dates and ID above/below it. */
+.val.name-ar { font-size: var(--name-ar-size); white-space: pre; }   /* pre: a typed trailing space stays a normal, visible space */
+/* Row 4, English tier: value runs through every free column = 142.626mm.
+   Font starts at 13.7pt and script.js shrinks it when the text would leave the cell. */
+.val.name-en { grid-column: 2 / span 3; text-align: left; padding: 0 1.5mm 0 6.604mm; font-size: 13.7pt; text-transform: uppercase; white-space: pre; }
+
+/* Empty cells: koi background ya dots nahi, completely transparent */
+.blank {
+  height: var(--tier-h);
+  background: transparent !important;
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: none;
+}
+
+/* Green badge: static, not selectable (unless unlocked).
+   English text: left, 3.262mm padding | Arabic text: right, 3.749mm padding */
+.badge {
+  height: var(--tier-h);
+  background: var(--green);
+  color: #fff;
+  font-weight: 700;
+  display: flex;
+  align-items: center;                 /* true vertical centring: no line-height dependency */
+  line-height: 1;                      /* reset baseline offset */
+  padding-top: 0;
+  padding-bottom: var(--badge-pb);     /* optical lift: DIN's baseline sits low in its line box (see :root --badge-pb-*) */
+  white-space: nowrap; overflow: hidden;
+  user-select: none; -webkit-user-select: none;
+  cursor: default;
+}
+/* English badge: direction LTR  -> flex-start = LEFT  */
+.tier.en .badge { font-family: var(--font-din-en); font-size: 14pt; justify-content: flex-start; padding-left: 3.262mm; padding-right: 2mm; --badge-pb: var(--badge-pb-en); }
+/* Arabic badge: dir="rtl" in HTML -> main axis is mirrored, so flex-START = RIGHT (flex-end would push text LEFT) */
+.tier.ar .badge { font-family: var(--font-din-ar); font-size: 14pt; direction: rtl; justify-content: flex-start; padding-right: 3.749mm; padding-left: 2mm; --badge-pb: var(--badge-pb-ar); }
+
+/* Arabic words: direction follows the first strong character, so Latin/digits typed
+   inside an RTL cell are not reordered (backwards typing). */
+.val[dir="rtl"] { unicode-bidi: plaintext; }
+/* Latin letters always CAPITAL (passport number) */
+.val.upper { text-transform: uppercase; }
+/* Passport number: 12pt (auto-shrinks only if the text is too wide for the cell) */
+.val.passport { font-size: 12pt; }
+/* Automatic / computed cells (dates): read-only, no edit cursor */
+.val.auto { cursor: default; user-select: none; -webkit-user-select: none; }
+
+/* Editable headings (unlocked) */
+.badge[contenteditable="true"] { user-select: text; -webkit-user-select: text; cursor: text; }
+.badge[contenteditable="true"]:hover,
+.badge[contenteditable="true"]:focus { outline-color: #fff; outline-offset: -2px; }
+
+/* Value cell: completely transparent, direct background ke upar */
+.val {
+  height: var(--tier-h);
+  min-width: 0;
+  background: transparent !important;
+  background-image: none !important;
+  font-family: Arial, sans-serif !important;
+  font-size: 8pt;
+  font-weight: normal !important;
+  color: #000;
+  line-height: var(--tier-h);
+  text-align: center;
+  padding: 0 1.5mm;
+  white-space: nowrap; overflow: hidden;
+}
+
+/* ---------- Segmented cells (Certification No., ID No.) ----------
+   .seg        = editable part
+   .seg-static = fixed/auto part (CR01IH[2611]000000, [2]000000000) */
+.seg {
+  display: inline-block;
+  min-width: 1.2ch;
+  vertical-align: top;
+}
+.seg-static {
+  cursor: default;
+  user-select: none; -webkit-user-select: none;
+}
+
+/* ==========================================================
+   NATIONALITY COMBOBOXES (English + Arabic)
+   ========================================================== */
+.val.combo { position: relative; padding: 0; }
+
+.combo-input {
+  display: block;
+  width: 100%;
+  height: var(--tier-h);
+  margin: 0;
+  padding: 0 7mm;                      /* symmetric: text stays centred, chevron has room */
+  border: none;
+  border-radius: 1px;
+  outline: none;
+  background: transparent;
+  color: #000;
+  font: inherit;
+  line-height: var(--tier-h);
+  text-align: center;
+  text-overflow: clip;
+  cursor: text;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+.combo-input:hover { outline: 1px dashed rgba(0, 150, 104, .65); outline-offset: -1px; }
+.combo-input:focus { outline: 1px dashed var(--green); outline-offset: -1px; }
+
+.combo-btn {
+  position: absolute;
+  right: 1.2mm; top: 50%;
+  transform: translateY(-50%);
+  width: 5mm; height: 5mm;
+  display: grid; place-items: center;
+  padding: 0; border: 0; border-radius: 50%;
+  background: transparent;
+  color: var(--green);
+  cursor: pointer;
+  transition: background .15s ease;
+}
+.combo-btn:hover { background: rgba(0, 150, 104, .12); }
+.combo-btn svg { width: 3.4mm; height: 3.4mm; transition: transform .22s ease; }
+.combo.is-open .combo-btn svg { transform: rotate(180deg); }
+
+/* Dropdown panel (lives on <body>, positioned by script.js) */
+.combo-menu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 240px;
+  max-height: 280px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: #fff;
+  border: 1px solid #d6dbe0;
+  border-radius: 12px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, .18), 0 2px 6px rgba(0, 0, 0, .08);
+  font: 500 13px/1.2 'Inter', Arial, sans-serif;
+  color: var(--text);
+  scrollbar-width: thin;
+
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-6px) scale(.98);
+  transform-origin: top center;
+  transition: opacity .16s ease, transform .16s ease, visibility 0s linear .16s;
+}
+.combo-menu.dropup { transform: translateY(6px) scale(.98); transform-origin: bottom center; }
+.combo-menu.open,
+.combo-menu.open.dropup {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: none;
+  transition-delay: 0s;
+}
+
+.combo-group {
+  padding: 8px 10px 4px;
+  font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: #8a949e;
+  cursor: default;
+}
+.combo-menu[dir="rtl"] .combo-group { letter-spacing: 0; font-family: 'Cairo', sans-serif; font-size: 11px; }
+
+.combo-opt {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background .12s ease;
+}
+.combo-opt .code {
+  flex: none;
+  min-width: 26px;
+  padding: 3px 0;
+  border-radius: 6px;
+  background: #eef1f4;
+  color: #5b6672;
+  font-size: 10px; font-weight: 700; letter-spacing: .04em; text-align: center;
+}
+.combo-opt .pri { font-weight: 600; }
+.combo-opt .sec { margin-inline-start: auto; color: #8a949e; font-size: 12px; }
+.combo-opt .pri.ar,
+.combo-opt .sec.ar { font-family: 'Cairo', sans-serif; direction: rtl; }
+.combo-opt .sec.ar { color: var(--green); font-weight: 600; font-size: 13px; }
+.combo-opt mark { background: rgba(0, 150, 104, .18); color: inherit; border-radius: 3px; padding: 0 1px; }
+.combo-opt.active { background: rgba(0, 150, 104, .10); }
+.combo-opt.active .code { background: rgba(0, 150, 104, .18); color: var(--green); }
+.combo-opt.selected .pri::after { content: " \2713"; color: var(--green); }
+.combo-empty { padding: 12px 10px; color: var(--muted); font-size: 12px; cursor: default; }
+
+@media (prefers-reduced-motion: reduce) {
+  .combo-menu, .combo-btn svg, .combo-opt { transition: none; }
+}
+
+/* ==========================================================
+   PHOTO / LOGO RIGHT-CLICK MENU
+   ========================================================== */
+.ctx-menu {
+  position: fixed;
+  z-index: 1100;
+  min-width: 190px;
+  padding: 6px;
+  display: flex; flex-direction: column;
+  background: #fff;
+  border: 1px solid #d6dbe0;
+  border-radius: 10px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, .18), 0 2px 6px rgba(0, 0, 0, .08);
+  font: 500 13px/1.2 'Inter', Arial, sans-serif;
+}
+.ctx-menu[hidden] { display: none; }
+.ctx-menu button {
+  text-align: left;
+  padding: 8px 10px;
+  border: 0; border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.ctx-menu button:hover:not(:disabled),
+.ctx-menu button:focus-visible { background: rgba(0, 150, 104, .10); outline: none; }
+.ctx-menu button:disabled { color: #aab2ba; cursor: default; }
+.ctx-menu hr { border: 0; border-top: 1px solid #e6e9ec; margin: 4px 2px; }
+
+/* ==========================================================
+   BOTTOM REGION  (disclaimer region 26.757 + ribbon 14.373 = 41.13mm)
+   ========================================================== */
+/* Region between the last tier and the ribbon: the two paragraphs are centred vertically in it,
+   and each paragraph centres its own text vertically, so EN and AR share one horizontal axis. */
+.note {
+  width: var(--row-w);
+  margin-left: var(--pad-x);
+  height: var(--note-h);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.note p {
+  height: 17.14mm;                      /* 4 lines x 4.285mm: the 9pt English text needs 4 lines */
+  overflow: hidden;
+  display: flex; flex-direction: column; justify-content: center;
+  font-size: 9pt;
+  line-height: 4.285mm;
+  white-space: pre-wrap;                /* keeps the Enter line breaks (saved as \n) */
+}
+.note .en {
+  width: 71.628mm;
+  height: 12.855mm;
+  max-height: 12.855mm;
+  line-height: 4.285mm;
+  font-family: var(--font-din-en);
+  font-size: 9pt;
+  font-weight: 700;
+  color: var(--text-gray);
+  direction: ltr; text-align: left;
+}
+.note .ar {
+  width: var(--note-ar-w);
+  font-family: var(--font-din-ar);
+  font-size: 9pt;
+  font-weight: 700;
+  color: var(--text-green);
+  direction: rtl; text-align: right;
+}
+
+/* Ribbon: 209.711 x 14.344mm reference banner (measured from Botton_Banner.png, 11.816 px/mm)
+   - font: Arial 14pt Regular (measured: ink widths match 14.0pt, not 14.276pt)
+   - icon -> text gap: ~3.9mm (ink-to-ink in reference: 3.81 / 4.06 / 4.32mm)
+   - icon + text share one axis, 0.45mm ABOVE the banner midline (reference cap-centre = 6.72mm from top)
+   - side margins and the 2 gaps between items are always equal (space-evenly), whatever the text length */
+.ribbon {
+  --ribbon-icon-gap: 3.9mm;            /* distance icon -> text */
+  --ribbon-lift:     0.9mm;            /* content axis moves up by HALF of this (0.45mm) */
+  height: var(--ribbon-h);
+  padding: 0 0 var(--ribbon-lift) 0;
+  background-color: #26704c;
+  background-image: linear-gradient(100deg, #26704c 0%, #27724f 30%, #288a59 55%, #2a9d63 78%, #24b069 100%);
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  color: #fff;
+  display: flex; align-items: center; justify-content: space-evenly;
+  font-family: 'Ribbon Helvetica', Arial, 'Helvetica Neue', Helvetica, 'Liberation Sans', sans-serif;   /* Arial/Helvetica REGULAR */
+  font-size: 14pt; font-weight: 400; line-height: 1;
+}
+.ribbon .item { display: inline-flex; align-items: center; white-space: nowrap; }
+.ribbon .ico {
+  flex: none;
+  display: block;
+  margin-right: var(--ribbon-icon-gap);
+  -webkit-user-drag: none; user-select: none; -webkit-user-select: none;
+  pointer-events: none;
+}
+.ribbon .ico-url      { width: 5.332mm; height: 5.332mm; }
+.ribbon .ico-twitter  { width: 6.178mm; height: 5.332mm; }
+.ribbon .ico-facebook { width: 2.370mm; height: 5.247mm; }
+
+/* ---------- Print ---------- */
+@page { size: A4 portrait; margin: 0; }
+
+@media print {
+  html, body { background: #fff; width: 210mm; }
+  .no-print { display: none !important; }
+
+  /* 0.5mm safety against Chrome's blank 2nd page */
+  .page {
+    margin: 0;
+    box-shadow: none;
+    min-height: 0;
+    height: 296.5mm;
+    max-height: 296.5mm;
+    break-after: avoid;
+    break-inside: avoid;
+  }
+
+  /* Ribbon pinned to the bottom edge of the PAPER: no white strip below it, and the 0.5mm safety
+     above no longer shifts it. Header + grid + disclaimer = 282.627mm, so the ribbon starts exactly
+     where the disclaimer region ends. */
+  .ribbon {
+    position: fixed;
+    left: 0; bottom: 0;
+    width: 210mm;
+    height: var(--ribbon-h);
+  }
+
+  * { outline: none !important; }
+  .upload.is-empty .hint { visibility: hidden; }
+  .logo { border-color: transparent !important; }
+  .invalid { box-shadow: none !important; }
+  [data-placeholder]::before { content: "" !important; display: none !important; }
+
+  /* Nationality controls must print as plain text: no arrow, border or browser UI */
+  .combo-input {
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    text-align: center;
+    font-family: Arial, sans-serif !important;
+    font-size: 8pt;
+    color: #000;
+  }
+  .combo-btn, .combo-menu, .ctx-menu { display: none !important; }
+}
+
+/* Modern Minimalist Tooltip - Crisp & Floating Above */
+.ui-tooltip {
+  position: fixed;
+  z-index: 99999;
+  pointer-events: none;
+  padding: 4px 9px;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+  font-size: 11px;
+  font-weight: 400 !important;             /* Pure Regular (Mota Bold bilkul khatam) */
+  letter-spacing: 0.2px;
+  line-height: 1.2;
+  color: #1e293b;                           /* Dark slate clean text */
+  background: #f8fafc;                      /* Soft elegant card */
+  border: 1px solid #cbd5e1;               /* Crisp visible clean border */
+  border-radius: 5px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  white-space: nowrap;
+  opacity: 0;
+  /* Text ke upar girne ke bajaye dabbe ke upar hawa mein float karega */
+  transform: translate(-50%, calc(-100% - 2px));
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.ui-tooltip.is-visible {
+  opacity: 1;
+  transform: translate(-50%, calc(-100% - 7px));
+}
+
+.ui-tooltip.is-visible {
+  opacity: 1;
+  transform: translate(-50%, -10px);     /* Frame se saaf upar float karega */
+}

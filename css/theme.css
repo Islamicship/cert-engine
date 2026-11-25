@@ -1,0 +1,311 @@
+/* ==========================================================================
+   theme.css - WORKSPACE theme (dark / light / auto)
+
+   SCOPE (strict): everything OUTSIDE the A4 certificate:
+     page backdrop (body), .toolbar + its buttons, .combo-menu, .ctx-menu,
+     .ui-tooltip, .pwa-toast.
+   The certificate (.page) is NEVER themed: it keeps the original --green /
+   --border / --text tokens from style.css. All tokens here use the --ws-*
+   prefix so they can never collide with those.
+
+   MECHANISM
+     js/theme.js (and the tiny inline bootstrap in <head>) set two attributes
+     on <html> before first paint:
+       data-theme-mode = auto | light | dark   (what the user chose)
+       data-theme      = light | dark          (what is actually applied)
+     Light values are the default (no attribute needed), dark overrides them.
+
+   CONTRAST
+     Every text/background pair below was computed against WCAG 2.x and is
+     >= 7:1 (AAA, normal text). Re-run tools/contrast-check.py after changing
+     any token.
+
+   PRINT
+     Everything is inside @media screen, plus a final @media print block that
+     forces a pure white sheet, so a dark workspace can never reach paper.
+   ========================================================================== */
+
+
+/* ================= TOKENS: LIGHT (default) ================= */
+:root {
+  --ws-bg:            #eceff1;   /* page backdrop (same as the original body colour) */
+  --ws-surface:       #ffffff;   /* menus, toast */
+  --ws-text:          #1f2937;
+  --ws-muted:         #374151;   /* secondary text */
+  --ws-group:         #4b5563;   /* dropdown group labels */
+
+  --ws-accent:        #00573a;   /* primary button fill (darkened brand green for AAA with white text) */
+  --ws-accent-hover:  #004630;
+  --ws-on-accent:     #ffffff;
+  --ws-accent-text:   #00573a;   /* green used as TEXT on surfaces */
+
+  --ws-border-subtle: #d6dbe0;   /* decorative container borders */
+  --ws-border-strong: #6b7680;   /* outlined-button borders (>= 3:1 non-text contrast) */
+  --ws-hover-bg:      #dde3e8;
+  --ws-active-bg:     #d9ede5;   /* highlighted menu row */
+  --ws-chip-bg:       #e9edf0;
+  --ws-chip-text:     #374151;
+  --ws-chip-active-bg:#c3e3d4;
+  --ws-mark-bg:       #bfe3d2;   /* search match highlight */
+  --ws-disabled:      #8a949e;
+  --ws-focus:         #00573a;
+
+  --ws-tip-bg:        #f8fafc;
+  --ws-tip-text:      #1e293b;
+  --ws-tip-border:    #cbd5e1;
+
+  --ws-shadow-pop:    0 14px 36px rgba(0, 0, 0, .18), 0 2px 6px rgba(0, 0, 0, .08);
+  --ws-page-shadow:   0 4px 24px rgba(0, 0, 0, .15);   /* identical to the original .page shadow */
+
+  color-scheme: light;
+}
+
+
+/* ================= TOKENS: DARK ================= */
+html[data-theme="dark"] {
+  --ws-bg:            #12161a;
+  --ws-surface:       #1c2228;
+  --ws-text:          #e8edf1;
+  --ws-muted:         #c4cdd5;
+  --ws-group:         #a7b3bd;
+
+  --ws-accent:        #4fd8a0;
+  --ws-accent-hover:  #73e5b8;
+  --ws-on-accent:     #04140b;
+  --ws-accent-text:   #5fe0ae;
+
+  --ws-border-subtle: #3a444d;
+  --ws-border-strong: #7d8a95;
+  --ws-hover-bg:      #28313a;
+  --ws-active-bg:     #24372f;
+  --ws-chip-bg:       #2b343c;
+  --ws-chip-text:     #cdd6dd;
+  --ws-chip-active-bg:#2f4a3e;
+  --ws-mark-bg:       #2f5a47;
+  --ws-disabled:      #66727d;
+  --ws-focus:         #5fe0ae;
+
+  --ws-tip-bg:        #2a323a;
+  --ws-tip-text:      #f1f5f9;
+  --ws-tip-border:    #4b5663;
+
+  --ws-shadow-pop:    0 14px 36px rgba(0, 0, 0, .55), 0 2px 6px rgba(0, 0, 0, .4);
+  --ws-page-shadow:   0 0 0 1px rgba(255, 255, 255, .06), 0 12px 40px rgba(0, 0, 0, .6);
+
+  color-scheme: dark;   /* dark scrollbars + native controls OUTSIDE the page */
+}
+
+
+@media screen {
+
+  /* ================= WORKSPACE BASE ================= */
+  body {
+    background: var(--ws-bg);
+    transition: background-color .25s ease;
+  }
+
+  /* The certificate stays light no matter what: this resets the inherited
+     color-scheme so native bits INSIDE the page (inputs, selection, caret)
+     never turn dark. Colours of .page itself are untouched. */
+  .page { color-scheme: light; }
+
+  #stage > .page { box-shadow: var(--ws-page-shadow); }
+
+
+  /* ================= TOOLBAR ================= */
+  /* style.css fixes the toolbar at 210mm wide, which overflows phones.
+     The toolbar is workspace chrome (not part of the A4 geometry), so it is
+     made fluid here: full-width sticky bar, buttons right-aligned to the
+     page edge on desktop, wrapping on narrow screens. */
+  .toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 900;
+    width: 100%;
+    margin: 0;
+    padding: max(8px, env(safe-area-inset-top)) max(12px, calc((100% - 210mm) / 2)) 8px;
+    background: var(--ws-bg);
+    border-bottom: 1px solid var(--ws-border-subtle);
+    color: var(--ws-muted);
+    justify-content: flex-end;
+    transition: background-color .25s ease, border-color .25s ease, color .25s ease;
+  }
+  .toolbar .actions {
+    flex: 0 1 auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .toolbar button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 34px;
+    white-space: nowrap;
+    background: var(--ws-accent);
+    color: var(--ws-on-accent);
+    transition: background-color .2s ease, color .2s ease, box-shadow .2s ease, transform .12s ease;
+  }
+  .toolbar button[hidden] { display: none; }
+  .toolbar button:hover { filter: none; background: var(--ws-accent-hover); }
+  .toolbar button:active { transform: translateY(1px); }
+  .toolbar button:focus-visible { outline: 2px solid var(--ws-focus); outline-offset: 2px; }
+
+  /* "Unlock layout": outlined when off, filled when on */
+  .toolbar button#lock-btn {
+    background: var(--ws-surface);
+    color: var(--ws-accent-text);
+    box-shadow: inset 0 0 0 1px var(--ws-accent-text);
+  }
+  .toolbar button#lock-btn:hover { background: var(--ws-active-bg); }
+  .toolbar button#lock-btn[aria-pressed="true"] {
+    background: var(--ws-accent);
+    color: var(--ws-on-accent);
+    box-shadow: none;
+  }
+  .toolbar button#lock-btn[aria-pressed="true"]:hover { background: var(--ws-accent-hover); }
+
+  /* Secondary buttons (Fit, Theme, Install) */
+  .toolbar button.ghost {
+    background: transparent;
+    color: var(--ws-muted);
+    box-shadow: inset 0 0 0 1px var(--ws-border-strong);
+  }
+  .toolbar button.ghost:hover { background: var(--ws-hover-bg); }
+
+  @media (pointer: coarse) {
+    .toolbar button { min-height: 44px; padding-left: 16px; padding-right: 16px; }
+    .toolbar button.theme-btn { min-width: 44px; padding-left: 12px; padding-right: 12px; }
+  }
+
+
+  /* ================= THEME TOGGLE BUTTON ================= */
+  /* Three stacked icons; only the one matching html[data-theme-mode] is visible.
+     The others are rotated + scaled down, so switching reads as a smooth morph. */
+  .toolbar button.theme-btn { padding: 8px 10px; min-width: 36px; }
+  .theme-ico { position: relative; display: block; width: 16px; height: 16px; flex: none; }
+  .theme-ico svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transform: rotate(-90deg) scale(.4);
+    transition: opacity .25s ease, transform .35s cubic-bezier(.34, 1.56, .64, 1);
+  }
+  html[data-theme-mode="auto"]  .theme-ico .ico-auto,
+  html[data-theme-mode="light"] .theme-ico .ico-light,
+  html[data-theme-mode="dark"]  .theme-ico .ico-dark {
+    opacity: 1;
+    transform: none;
+  }
+
+
+  /* ================= NATIONALITY DROPDOWN (.combo-menu) ================= */
+  .combo-menu,
+  .ctx-menu {
+    background: var(--ws-surface);
+    border-color: var(--ws-border-subtle);
+    color: var(--ws-text);
+    box-shadow: var(--ws-shadow-pop);
+  }
+  .combo-group                  { color: var(--ws-group); }
+  .combo-opt .code              { background: var(--ws-chip-bg); color: var(--ws-chip-text); }
+  .combo-opt .sec               { color: var(--ws-muted); }
+  .combo-opt .sec.ar            { color: var(--ws-accent-text); }
+  .combo-opt mark               { background: var(--ws-mark-bg); }
+  .combo-opt.active             { background: var(--ws-active-bg); }
+  .combo-opt.active .code       { background: var(--ws-chip-active-bg); color: var(--ws-accent-text); }
+  .combo-opt.selected .pri::after { color: var(--ws-accent-text); }
+  .combo-empty                  { color: var(--ws-muted); }
+
+
+  /* ================= PHOTO / LOGO CONTEXT MENU (.ctx-menu) ================= */
+  .ctx-menu button { color: var(--ws-text); }
+  .ctx-menu button:hover:not(:disabled),
+  .ctx-menu button:focus-visible { background: var(--ws-active-bg); }
+  .ctx-menu button:disabled { color: var(--ws-disabled); }
+  .ctx-menu hr { border-top-color: var(--ws-border-subtle); }
+
+
+  /* ================= TOOLTIP (.ui-tooltip) ================= */
+  .ui-tooltip {
+    background: var(--ws-tip-bg);
+    color: var(--ws-tip-text);
+    border-color: var(--ws-tip-border);
+    box-shadow: var(--ws-shadow-pop);
+  }
+
+
+  /* ================= PWA TOAST (update available) ================= */
+  .pwa-toast {
+    position: fixed;
+    left: 50%;
+    bottom: max(16px, env(safe-area-inset-bottom));
+    z-index: 1200;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: calc(100vw - 24px);
+    padding: 10px 10px 10px 16px;
+    background: var(--ws-surface);
+    color: var(--ws-text);
+    border: 1px solid var(--ws-border-strong);
+    border-radius: 12px;
+    box-shadow: var(--ws-shadow-pop);
+    font: 500 13px/1.3 'Inter', Arial, sans-serif;
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, 24px);
+    transition: opacity .2s ease, transform .3s cubic-bezier(.16, 1, .3, 1);
+  }
+  .pwa-toast.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(-50%, 0);
+  }
+  .pwa-toast__actions { display: inline-flex; gap: 6px; flex: none; }
+  .pwa-toast button {
+    min-height: 34px;
+    padding: 6px 12px;
+    border: 0;
+    border-radius: 6px;
+    font: 600 12px 'Inter', Arial, sans-serif;
+    cursor: pointer;
+    background: var(--ws-accent);
+    color: var(--ws-on-accent);
+  }
+  .pwa-toast button:hover { background: var(--ws-accent-hover); }
+  .pwa-toast button.ghost {
+    background: transparent;
+    color: var(--ws-muted);
+    box-shadow: inset 0 0 0 1px var(--ws-border-strong);
+  }
+  .pwa-toast button.ghost:hover { background: var(--ws-hover-bg); }
+  .pwa-toast button:focus-visible { outline: 2px solid var(--ws-focus); outline-offset: 2px; }
+}
+
+
+/* ================= REDUCED MOTION ================= */
+@media (prefers-reduced-motion: reduce) {
+  body,
+  .toolbar,
+  .toolbar button,
+  .theme-ico svg,
+  .pwa-toast { transition: none !important; }
+}
+
+
+/* ================= PRINT ISOLATION =================
+   Belt and braces: the workspace rules above are screen-only, and this block
+   additionally forces a white sheet and a light colour-scheme so nothing dark
+   can leak into the PDF / paper, whatever theme is active on screen. */
+@media print {
+  :root,
+  html[data-theme="dark"] { color-scheme: light !important; }
+  html,
+  body { background: #fff !important; }
+  .toolbar,
+  .pwa-toast { display: none !important; }
+}

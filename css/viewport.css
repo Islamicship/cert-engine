@@ -1,0 +1,113 @@
+/* ==========================================================================
+   viewport.css - Canvas stage for the A4 certificate
+
+   MODEL (Canva / Figma style)
+     #viewport  scroll/centre area, holds padding ("touch-friendly margins")
+       #stage   box that is sized by JS to (A4 width x scale, A4 height x scale)
+         .page  the untouched A4 sheet, absolutely positioned inside the stage
+                and scaled with transform: scale(s) from its top-left corner.
+
+   WHY transform AND NOT fluid units / media queries
+     transform scales every millimetre, glyph and border by the same factor, so
+     the 196.85mm rows, 7.923mm tiers and 1.898mm gaps keep their exact ratios.
+     Media queries on .tier/.grid/.val would re-flow them and break the
+     Corel-measured geometry.
+
+   WHY #stage IS SIZED SEPARATELY
+     transform does not change layout size. Without an explicitly sized stage
+     the page would keep occupying 210mm x 297mm of layout, producing ghost
+     scrollbars and empty space. viewport.js writes the scaled width/height
+     into the stage so the layout box always equals the visual box.
+
+   style.css is NOT modified: its `.page { margin: 4mm auto 8mm }` is neutralised
+   here (screen only) because the stage now does the centring.
+   ========================================================================== */
+
+
+@media screen {
+
+  /* ================= SCROLLBAR STABILITY ================= */
+  /* Reserve the vertical scrollbar gutter permanently. Otherwise the scaled
+     page can make a scrollbar appear/disappear, changing the available width,
+     changing the scale again... (resize feedback loop). */
+  html { scrollbar-gutter: stable; }
+
+
+  /* ================= VIEWPORT (scroll area) ================= */
+  #viewport {
+    display: block;
+    width: 100%;
+    padding: 20px 24px 40px;
+  }
+  /* "100%" mode may be wider than the screen: allow horizontal panning there only.
+     (overflow-x:auto would also clip the page shadow, so it is limited to this mode.) */
+  #viewport[data-mode="actual"] { overflow-x: auto; }
+
+  /* Phones / small tablets: smaller, touch-friendly gutters */
+  @media (max-width: 820px) {
+    #viewport { padding: 12px 12px 28px; }
+  }
+
+
+  /* ================= STAGE ================= */
+  #stage {
+    position: relative;
+    margin: 0 auto;     /* desktop: horizontally centred */
+  }
+
+  /* Page inside the stage. `.vp-ready` is added by viewport.js in the SAME frame in
+     which it sizes the stage, so the page never renders absolutely positioned inside an
+     unsized (0-height) stage. Before that, the page simply stays in normal flow. */
+  .vp-ready #stage > .page {
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin: 0;                 /* overrides style.css .page { margin: 4mm auto 8mm } */
+    transform-origin: 0 0;     /* scale from the top-left, matches stage origin */
+  }
+  #stage > .page { margin: 0; }
+
+  /* No flash of an unscaled page: hide the stage until the first scale is applied.
+     The `.js` class is set by the inline bootstrap in <head>. `.vp-failsafe`
+     (added after 2.5s by the same bootstrap) un-hides it if viewport.js never loads,
+     so a failed script can never leave a blank screen. */
+  .js:not(.vp-ready):not(.vp-failsafe) #stage { visibility: hidden; }
+}
+
+
+/* ================= PRINT: HARD RESET =================
+   The paper must see EXACTLY the original document structure: two inert wrapper
+   <div>s, no transform, no offset, no padding. `!important` beats the inline
+   width/height/transform that viewport.js writes on screen.
+   (A transformed ancestor would also turn the print-only `position: fixed` ribbon
+   into a box relative to that ancestor instead of the paper edge.) */
+@media print {
+  html { scrollbar-gutter: auto; }
+
+  #viewport {
+    display: block !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    transform: none !important;
+  }
+  #stage {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    transform: none !important;
+    visibility: visible !important;
+  }
+  #stage > .page,
+  .vp-ready #stage > .page {
+    position: static !important;
+    top: auto !important;
+    left: auto !important;
+    margin: 0 !important;
+    transform: none !important;
+    will-change: auto !important;
+  }
+}

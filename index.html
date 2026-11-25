@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Certification | شهادة</title>
+
+    <!-- Fonts: all self-hosted from ./fonts/ (see @font-face in style.css). DIN Next LT Arabic Bold: copy your own licensed file there (see fonts/README.txt). -->
+
+    <!-- PWA + browser UI colour (theme.js keeps the colour in sync with light/dark) -->
+    <meta name="theme-color" content="#eceff1" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="assets/icons/icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="CertEngine" />
+
+    <!-- Pre-paint bootstrap (must stay inline, before any stylesheet):
+         1. sets the workspace theme so a dark-mode user never sees a white flash;
+         2. adds .js so the stage can stay hidden until viewport.js applied the first scale;
+         3. failsafe: if viewport.js never runs, un-hide the stage after 2.5s. -->
+    <script>
+      (function () {
+        var d = document.documentElement;
+        d.classList.add("js");
+        setTimeout(function () { d.classList.add("vp-failsafe"); }, 2500);
+        try {
+          var m = localStorage.getItem("cert-theme");
+          if (m !== "light" && m !== "dark") m = "auto";
+          var dark = m === "dark" || (m === "auto" && window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches);
+          d.setAttribute("data-theme-mode", m);
+          d.setAttribute("data-theme", dark ? "dark" : "light");
+          if (dark) document.querySelector('meta[name="theme-color"]').setAttribute("content", "#12161a");
+        } catch (e) {}
+      })();
+    </script>
+
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="css/theme.css" />
+    <link rel="stylesheet" href="css/viewport.css" />
+    <link rel="stylesheet" href="css/menu-tools.css" />
+
+    <!-- Order matters: viewport.js must run before script.js so window.__certScale exists. -->
+    <script src="js/theme.js" defer></script>
+    <script src="js/viewport.js" defer></script>
+    <script src="script.js" defer></script>
+    <script src="js/menu-tools.js" defer></script>
+    <script src="js/pwa.js" defer></script>
+  </head>
+  <body>
+    <!-- 2-tier workspace header (screen only, hidden in print) -->
+    <header class="toolbar app-header no-print" id="app-header">
+      <div class="ah-top">
+        <nav class="desktop-menubar no-print" id="menubar"></nav>
+
+        <div class="ah-tray">
+          <button type="button" id="install-btn" class="tray-btn" hidden aria-label="Install app" title="Install app">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>
+          </button>
+
+          <button type="button" id="theme-btn" class="tray-btn theme-btn" aria-label="Theme: Auto (follows system). Click to change." title="Theme: Auto (follows system)">
+            <span class="theme-ico" aria-hidden="true">
+              <svg class="ico-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v18" /><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg>
+              <svg class="ico-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+              <svg class="ico-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+            </span>
+          </button>
+
+          <button type="button" id="lock-btn" class="lock-badge" aria-pressed="false" title="Unlock / lock the layout texts (titles, badges, disclaimer, ribbon)">Unlock layout</button>
+        </div>
+      </div>
+
+      <div class="ah-prop" id="propbar" role="toolbar" aria-label="Property bar">
+        <div class="pb-dd" id="pb-size-dd">
+          <button type="button" class="pb-btn pb-dd-btn" id="pb-size-btn" aria-haspopup="menu" aria-expanded="false" title="Document size">
+            <span class="pb-btn__label">A4</span>
+            <svg class="pb-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+        </div>
+
+        <span class="pb-field pb-dims" title="Paper width (locked: A4 print geometry)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h18M7 8l-4 4 4 4M17 8l4 4-4 4"/></svg>
+          <span class="pb-field__val">210.0</span><span class="pb-field__unit">mm</span>
+        </span>
+        <span class="pb-field pb-dims" title="Paper height (locked: A4 print geometry)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M8 7l4-4 4 4M8 17l4 4 4-4"/></svg>
+          <span class="pb-field__val">297.0</span><span class="pb-field__unit">mm</span>
+        </span>
+
+        <span class="pb-sep" aria-hidden="true"></span>
+
+        <div class="pb-dd" id="pb-view-dd">
+          <button type="button" class="pb-btn pb-dd-btn" id="pb-view-btn" aria-haspopup="menu" aria-expanded="false" title="View / zoom preset">
+            <span class="pb-btn__label" id="pb-view-label">Fit Width</span>
+            <svg class="pb-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+        </div>
+        <span class="pb-pct" id="pb-view-pct" title="Current zoom">100%</span>
+
+        <span class="pb-sep" aria-hidden="true"></span>
+
+        <button type="button" class="pb-ico" id="pb-print" title="Print / Save as PDF (Ctrl+P)" aria-label="Print / Save as PDF">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-2M7 14h10v7H7z"/></svg>
+        </button>
+        <button type="button" class="pb-ico" id="pb-undo" title="Undo (Ctrl+Z)" aria-label="Undo" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>
+        </button>
+        <button type="button" class="pb-ico" id="pb-redo" title="Redo (Ctrl+Y)" aria-label="Redo" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14l5-5-5-5M20 9H9.5A5.5 5.5 0 0 0 4 14.5v0A5.5 5.5 0 0 0 9.5 20H13"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Right-click menu for Photo / Logo boxes (items are built by script.js) -->
+    <div class="ctx-menu no-print" id="ctx-menu" role="menu" hidden></div>
+    <aside class="floating-palette no-print" id="floating-palette"></aside>
+
+    <!-- Nationality dropdown panels are created by script.js and appended to <body>
+     (.tier/.page have overflow:hidden and would clip them). -->
+
+    <!-- Canvas scaler wrappers (js/viewport.js). The A4 sheet markup inside them is unchanged. -->
+    <div id="viewport">
+    <div id="stage">
+    <main class="page" spellcheck="false">
+      <div class="content">
+        <!-- ================= HEADER: photo | title | logo ================= -->
+        <header class="header">
+          <div
+            class="upload photo is-empty"
+            id="photo-box"
+            data-label="photo"
+            role="button"
+            tabindex="0"
+            aria-label="Upload photo"
+          >
+            <div class="frame">
+              <span class="hint">Click to<br />upload photo</span>
+            </div>
+            <input
+              type="file"
+              accept="image/*"
+              tabindex="-1"
+              aria-hidden="true"
+            />
+          </div>
+
+          <div class="title">
+            <div
+              class="ar fit"
+              lang="ar"
+              dir="rtl"
+              data-unlockable
+              data-filter="arabic"
+              data-max="40"
+              data-collapse
+            >
+              شهادة
+            </div>
+            <div
+              class="en fit"
+              data-unlockable
+              data-filter="english-text"
+              data-max="40"
+              data-collapse
+            >
+              CERTIFICATION
+            </div>
+          </div>
+
+          <div
+            class="upload logo"
+            id="logo-box"
+            data-label="logo"
+            role="button"
+            tabindex="0"
+            aria-label="Upload logo"
+          >
+            <div class="frame">
+              <img src="assets/logo.png" alt="Logo" />
+              <span class="hint">Click to<br />upload logo</span>
+            </div>
+            <input
+              type="file"
+              accept="image/*"
+              tabindex="-1"
+              aria-hidden="true"
+            />
+          </div>
+        </header>
+
+        <!-- ================= DATA GRID: 10 blocks x 2 tiers =================
+         Every tier = 4-column grid: 54.224mm | 44.201mm | 44.201mm | 54.224mm = 196.85mm
+         Upper tier (Arabic):  [blank][ARABIC VALUE][blank][ARABIC BADGE]
+         Lower tier (English): [ENGLISH BADGE][blank][ENGLISH VALUE][blank]
+         Row 4 (Name): Arabic value sits in column 2 (same axis as dates/ID), English value spans 2-4.
+
+         Field rules (enforced in script.js through data-* attributes):
+           data-filter   = allowed characters (alnum-upper | digits | dob | english-name | arabic)
+           data-max      = max length
+           data-sync     = mirrored between Arabic and English tier
+           data-pad      = left-pad with zeros on blur
+           data-exact    = must have exactly N chars (red underline on screen otherwise)
+           data-unlockable = locked until toolbar "Unlock layout"
+
+         SAVED DATA: script.js stores every [data-unlockable], [data-filter], [data-sync] and
+         .combo-input element in DOCUMENT ORDER. If you add/remove such a field, bump
+         STORE_VERSION in script.js so old saved data is discarded instead of landing in the wrong cell.
+
+         Do NOT put whitespace between the <span>s of a segmented cell: it would render as a gap. -->
+        <section class="grid">
+          <!-- 1. Certification No.  CR01IH | 2611 (auto YYMM) | 000000 -->
+          <div class="block">
+            <div class="tier ar">
+              <div class="blank c1" aria-hidden="true"></div>
+              <div class="val c2 cert" lang="ar" dir="ltr">
+                <span
+                  class="seg"
+                  data-filter="alnum-upper"
+                  data-max="6"
+                  data-default="CR01IH"
+                  data-sync="cert-prefix" data-placeholder="CR01IH"
+                  contenteditable="true"
+                  >CR01IH</span
+                ><span class="seg-static" data-auto="cert-ym">2611</span
+                ><span
+                  class="seg"
+                  data-filter="digits"
+                  data-max="6"
+                  data-pad="6"
+                  data-sync="cert-seq" data-placeholder="000000"
+                  contenteditable="true"
+                  >000000</span
+                >
+              </div>
+              <div class="blank c3" aria-hidden="true"></div>
+              <div class="badge c4 fit" lang="ar" dir="rtl" data-unlockable>
+                رقم الشهادة
+              </div>
+            </div>
+            <div class="tier en">
+              <div class="badge c1 fit" data-unlockable>Certification No.</div>
+              <div class="blank c2" aria-hidden="true"></div>
+              <div class="val c3 cert">
+                <span
+                  class="seg"
+                  data-filter="alnum-upper"
+                  data-max="6"
+                  data-default="CR01IH"
+                  data-sync="cert-prefix" data-placeholder="CR01IH"
+                  contenteditable="true"
+                  >CR01IH</span
+                ><span class="seg-static" data-auto="cert-ym">2611</span
+                ><span
+                  class="seg"
+                  data-filter="digits"
+                  data-max="6"
+                  data-pad="6"
+                  data-sync="cert-seq" data-placeholder="000000"
+                  contenteditable="true"
+                  >000000</span
+                >
+              </div>
+              <div class="blank c4" aria-hidden="true"></div>
+            </div>
+          </div>
+
+          <!-- 2. Date of Issue -->
+          <div class="block">
+            <div class="tier ar">
+              <div class="blank c1" aria-hidden="true"></div>
+              <div class="val c2 auto" lang="ar" dir="ltr" data-auto="issue-ar">
+                00/00/1448
+              </div>
+              <div class="blank c3" aria-hidden="true"></div>
+              <div class="badge c4" lang="ar" dir="rtl">
+                تاريخ إصدار الشهادة
+              </div>
+            </div>
+            <div class="tier en">
+              <div class="badge c1">Date of Issue</div>
+              <div class="blank c2" aria-hidden="true"></div>
+              <div class="val c3 auto" data-auto="issue-en">DD/MM/YYYY</div>
+              <div class="blank c4" aria-hidden="true"></div>
+            </div>
+          </div>
+
+          <!-- 3. Date of Expiry -->
+          <div class="block">
+            <div class="tier ar">
+              <div class="blank c1" aria-hidden="true"></div>
+              <div
+                class="val c2 auto"
+                lang="ar"
+                dir="ltr"
+                data-auto="expiry-ar"
+              >
+                00/00/1448
+              </div>
+              <div class="blank c3" aria-hidden="true"></div>
+              <div class="badge c4" lang="ar" dir="rtl">
+                تاريخ إنتهاء الشهادة
+              </div>
+            </div>
+            <div class="tier en">
+              <div class="badge c1">Date of Expiry</div>
+              <div class="blank c2" aria-hidden="true"></div>
+              <div class="val c3 auto" data-auto="expiry-en">DD/MM/YYYY</div>
+              <div class="blank c4" aria-hidden="true"></div>
+            </div>
+          </div>
+
+          <!-- 4. Name  (Arabic: column 2, Arabic letters only | English: columns 2-4, English letters only.
+                     Both shrink their font automatically when the text is wider than the cell.) -->    <div class="block">
+      <div class="tier ar">
+    <div class="blank c1" aria-hidden="true"></div>
+    <div class="val c2 name-ar" data-placeholder="الاسم الكامل" lang="ar" dir="rtl" data-filter="arabic" data-max="60" data-collapse contenteditable="true">الاسم الكامل</div>
+    <div class="blank c3" aria-hidden="true"></div>
+    <div class="badge c4" lang="ar" dir="rtl">الاسم</div>
+  </div>
+  <div class="tier en">
+    <div class="badge c1">Name</div>
+    <div class="val name-en" data-placeholder="FULL NAME" spellcheck="false" data-filter="english-name" data-max="60" data-collapse contenteditable="true">FULL NAME</div>
+  </div>
+</div>
+
+          <!-- 5. ID No.  first digit fixed "2" + 9 editable digits = 10 -->
+          <div class="block">
+            <div class="tier ar">
+              <div class="blank c1" aria-hidden="true"></div>
+              <div class="val c2 idno" lang="ar" dir="ltr">
+                <span class="seg-static">2</span
+                ><span
+                  class="seg"
+                  data-filter="digits"
+                  data-max="9"
+                  data-exact="9"
+                  data-sync="id" data-placeholder="000000000"
+                  contenteditable="true"
+                  >000000000</span
+                >
+              </div>
+              <div class="blank c3" aria-hidden="true"></div>
+              <div class="badge c4" lang="ar" dir="rtl">رقم الهوية</div>
+            </div>
+            <div class="tier en">
+              <div class="badge c1">ID No.</div>
+              <div class="blank c2" aria-hidden="true"></div>
+              <div class="val c3 idno">
+                <span class="seg-static">2</span
+                ><span
+                  class="seg"
+                  data-filter="digits"
+                  data-max="9"
+                  data-exact="9"
+                  data-sync="id" data-placeholder="000000000"
+                  contenteditable="true"
+                  >000000000</span
+                >
+              </div>
+              <div class="blank c4" aria-hidden="true"></div>
+            </div>
+          </div>
+
+          <!-- 6. Passport number (12pt) -->
+          <div class="block">
+            <div class="tier ar">
+              <div class="blank c1" aria-hidden="true"></div>
+              <div
+                class="val c2 upper passport"
+                lang="ar"
+                dir="ltr"
+                data-sync="passport" data-placeholder="A0000000"
+                data-nospace
+                contenteditable="true"
+              >
+                A0000000
+              </div>
+              <div class="blank c3" aria-hidden="true"></div>
+              <div class="badge c4 fit" lang="ar" dir="rtl" data-unlockable>
+                رقم الجواز
+              </div>
+            </div>
+            <div class="tier en">
+              <div class="badge c1 fit" data-unlockable>Passport number</div>
+              <div class="blank c2" aria-hidden="true"></div>
+              <div
+                class="val c3 upper passport"
+                data-sync="passport" data-placeholder="A0000000"
+                data-nospace
+                contenteditable="true"
+              >
+                A0000000
+              </div>
+              <div class="blank c4" aria-hidden="true"></div>
+            </div>
+          </div>
+
+          <!-- 7. Date of Birth
+           English = Gregorian, digits only, slashes added automatically (DD/MM/YYYY).
+           Arabic  = Hijri YYYY/MM/DD, computed automatically, read-only. -->
+          <div class="block">
+            <div class="tier ar">
+              <div class="blank c1" aria-hidden="true"></div>
+              <div class="val c2 auto" id="dob-ar" lang="ar" dir="ltr" data-placeholder="YYYY/MM/DD"></div>
+              <div class="blank c3" aria-hidden="true"></div>
+              <div class="badge c4 fit" lang="ar" dir="rtl" data-unlockable>
+                تاريخ الميلاد
+              </div>
+            </div>
+            <div class="tier en">
+              <div class="badge c1 fit" data-unlockable>Date of Birth</div>
+              <div class="blank c2" aria-hidden="true"></div>
+              <div
+                class="val c3"
+                id="dob-en" data-placeholder="DD/MM/YYYY"
+                data-dob
+                data-filter="dob"
+                data-max="8"
+                contenteditable="true"
+              >
+                01/01/2000
+              </div>
+              <div class="blank c4" aria-hidden="true"></div>
+            </div>
+          </div>
+
+          <!-- 8. Nationality
+           BOTH tiers are dropdowns: pick from either list (the other tier fills automatically)
+           or type a custom value (English letters in EN, Arabic letters in AR). -->
+          <div class="block">
+            <div class="tier ar">
+              <div class="blank c1" aria-hidden="true"></div>
+              <div class="val c2 combo" id="nat-ar-combo">
+                <input
+                  class="combo-input"
+                  id="nat-ar"
+                  type="text"
+                  value="باكستان"
+                  maxlength="30"
+                  lang="ar"
+                  dir="rtl"
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-expanded="false"
+                  autocomplete="off"
+                  spellcheck="false"
+                  aria-label="الجنسية"
+                />
+                <button
+                  type="button"
+                  class="combo-btn no-print"
+                  tabindex="-1"
+                  aria-label="Show nationality list (Arabic)"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      d="M6 9l6 6 6-6"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2.4"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </button>
+              </div>
+              <div class="blank c3" aria-hidden="true"></div>
+              <div class="badge c4 fit" lang="ar" dir="rtl" data-unlockable>
+                الجنسية
+              </div>
+            </div>
+            <div class="tier en">
+              <div class="badge c1 fit" data-unlockable>Nationality</div>
+              <div class="blank c2" aria-hidden="true"></div>
+              <div class="val c3 combo" id="nat-en-combo">
+                <input
+                  class="combo-input"
+                  id="nat-en"
+                  type="text"
+                  value="Pakistan"
+                  maxlength="30"
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-expanded="false"
+                  autocomplete="off"
+                  spellcheck="false"
+                  aria-label="Nationality"
+                />
+                <button
+                  type="button"
+                  class="combo-btn no-print"
+                  tabindex="-1"
+                  aria-label="Show nationality list"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      d="M6 9l6 6 6-6"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2.4"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </button>
+              </div>
+              <div class="blank c4" aria-hidden="true"></div>
+            </div>
+          </div>
+
+          <!-- 9. Requested By  (values are part of the lock layout) -->
+          <div class="block">
+            <div class="tier ar">
+              <div class="blank c1" aria-hidden="true"></div>
+              <div class="val c2" lang="ar" dir="rtl" data-unlockable>
+                جهة داخلية
+              </div>
+              <div class="blank c3" aria-hidden="true"></div>
+              <div class="badge c4 fit" lang="ar" dir="rtl" data-unlockable>
+                الجهة الطالبة
+              </div>
+            </div>
+            <div class="tier en">
+              <div class="badge c1 fit" data-unlockable>Requested By</div>
+              <div class="blank c2" aria-hidden="true"></div>
+              <div class="val c3" data-unlockable>Internal Entity</div>
+              <div class="blank c4" aria-hidden="true"></div>
+            </div>
+          </div>
+
+          <!-- 10. Certification Purpose  (values are part of the lock layout) -->
+          <div class="block">
+            <div class="tier ar">
+              <div class="blank c1" aria-hidden="true"></div>
+              <div class="val c2" lang="ar" dir="rtl" data-unlockable>
+                اصدار ترخيص
+              </div>
+              <div class="blank c3" aria-hidden="true"></div>
+              <div class="badge c4 fit" lang="ar" dir="rtl" data-unlockable>
+                الغرض من الطلب
+              </div>
+            </div>
+            <div class="tier en">
+              <div class="badge c1 fit" data-unlockable>
+                Certification Purpose
+              </div>
+              <div class="blank c2" aria-hidden="true"></div>
+              <div class="val c3" data-unlockable>Issue license</div>
+              <div class="blank c4" aria-hidden="true"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= DISCLAIMER (locked until toolbar Unlock) =================
+         Region between the last tier and the ribbon. Both paragraphs are vertically centred
+         inside their own boxes AND the region itself is centred between grid and ribbon. -->
+        <section class="note">
+          <p class="en" data-unlockable data-multiline>
+            This certifies that the person named above is recorded in the
+            records of Company Name as of the issue date. For administrative use
+            only; not a government document.
+          </p>
+          <p class="ar" lang="ar" dir="rtl" data-unlockable data-multiline>
+            نشهد بأن الشخص المذكور مسجل في سجلات اسم الشركة حتى تاريخ الإصدار.
+            للاستخدام الإداري فقط وليست وثيقة حكومية.
+          </p>
+        </section>
+      </div>
+
+      <!-- ================= CONTACT RIBBON (pinned to the very bottom edge of the page/print) ================= -->
+      <footer class="ribbon">
+        <span class="item">
+          <img
+            class="ico ico-url"
+            src="assets/url.png"
+            alt=""
+            draggable="false"
+          />
+          <span data-unlockable>www.company.com</span>
+        </span>
+        <span class="item">
+          <img
+            class="ico ico-twitter"
+            src="assets/twitter.png"
+            alt=""
+            draggable="false"
+          />
+          <span data-unlockable>@company</span>
+        </span>
+        <span class="item">
+          <img
+            class="ico ico-facebook"
+            src="assets/facebook.png"
+            alt=""
+            draggable="false"
+          />
+          <span data-unlockable>facebook.com/company</span>
+        </span>
+      </footer>
+    </main>
+    </div><!-- /#stage -->
+    </div><!-- /#viewport -->
+  </body>
+</html>
