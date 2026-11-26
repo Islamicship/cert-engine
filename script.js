@@ -124,6 +124,7 @@
   const imgGet = (key) => dbOp('readonly', (s) => s.get(key)).catch(() => undefined);
   const imgDel = (key) => dbOp('readwrite', (s) => s.delete(key)).catch(() => {});
 
+
   /* ----------------------------------------------------------
    * 1. Photo / Logo: upload, remove, lock (right-click menu)
    * ---------------------------------------------------------- */
@@ -133,6 +134,174 @@
     box.classList.toggle('is-locked', !!locked);
     box.setAttribute('aria-disabled', locked ? 'true' : 'false');
   }
+          /* ============================================================
+            PRECISION PHOTO CONTROLLER (EXIF NORMALIZATION + PAN/ZOOM)
+            ============================================================ */
+    (function initPhotoController() {
+      const photoBox = document.getElementById("photo-box");
+      const photoInput = document.getElementById("photo-file-input");
+      const photoFrame = document.getElementById("photo-frame");
+      const photoImg = document.getElementById("photo-img");
+      const placeholder = photoBox ? photoBox.querySelector(".hint") : null;
+      const toolbar = document.getElementById("photo-toolbar");
+
+      if (!photoBox || !photoInput || !photoFrame || !photoImg || !toolbar) return;
+
+      const btnRotateCW = document.getElementById("btnRotateCW");
+      const btnRotateCCW = document.getElementById("btnRotateCCW");
+      const btnZoomIn = document.getElementById("btnZoomIn");
+      const btnZoomOut = document.getElementById("btnZoomOut");
+      const btnReset = document.getElementById("btnResetPhoto");
+      const btnChange = document.getElementById("btnChangePhoto");
+
+      // State Management
+      let state = {
+        scale: 1.0,
+        x: 0,
+        y: 0,
+        rotation: 0,
+        isDragging: false,
+        startX: 0,
+        startY: 0
+      };
+
+      function updateTransform() {
+        photoImg.style.transform = `translate(calc(-50% + ${state.x}px), calc(-50% + ${state.y}px)) scale(${state.scale}) rotate(${state.rotation}deg)`;
+      }
+
+      function resetState() {
+        state.scale = 1.0;
+        state.x = 0;
+        state.y = 0;
+        state.rotation = 0;
+        updateTransform();
+      }
+
+      // Toolbar buttons click se parent box ka file-picker na khulay
+      toolbar.addEventListener("click", (e) => e.stopPropagation());
+      toolbar.addEventListener("mousedown", (e) => e.stopPropagation());
+
+      // --- 1. EXIF Auto-Rotation Image Loader ---
+      photoInput.addEventListener("change", async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        try {
+          if ("createImageBitmap" in window) {
+            const imageBitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+            const canvas = document.createElement("canvas");
+            canvas.width = imageBitmap.width;
+            canvas.height = imageBitmap.height;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(imageBitmap, 0, 0);
+            photoImg.src = canvas.toDataURL("image/jpeg", 0.95);
+          } else {
+            const reader = new FileReader();
+            reader.onload = (evt) => { photoImg.src = evt.target.result; };
+            reader.readAsDataURL(file);
+          }
+
+          photoImg.onload = () => {
+            const frameW = photoFrame.clientWidth || 112;
+            const frameH = photoFrame.clientHeight || 140;
+            const imgRatio = photoImg.naturalWidth / photoImg.naturalHeight;
+            const frameRatio = frameW / frameH;
+
+            if (imgRatio > frameRatio) {
+              photoImg.style.height = `${frameH}px`;
+              photoImg.style.width = "auto";
+            } else {
+              photoImg.style.width = `${frameW}px`;
+              photoImg.style.height = "auto";
+            }
+
+            photoImg.style.display = "block";
+            if (placeholder) placeholder.style.display = "none";
+            photoBox.classList.remove("is-empty");
+            toolbar.classList.add("has-photo");
+            resetState();
+          };
+        } catch (err) {
+          console.error("Photo loading failed:", err);
+        }
+      });
+
+      // --- 2. Interactive Pan / Dragging (Mouse & Touch) ---
+      function onPointerDown(e) {
+        if (!photoImg.src || photoImg.style.display === "none") return;
+        state.isDragging = true;
+        photoFrame.classList.add("is-dragging");
+        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+        state.startX = clientX - state.x;
+        state.startY = clientY - state.y;
+        e.preventDefault();
+        e.stopPropagation();
+      }
+
+      function onPointerMove(e) {
+        if (!state.isDragging) return;
+        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+        state.x = clientX - state.startX;
+        state.y = clientY - state.startY;
+        updateTransform();
+      }
+
+      function onPointerUp() {
+        state.isDragging = false;
+        photoFrame.classList.remove("is-dragging");
+      }
+
+      photoFrame.addEventListener("mousedown", onPointerDown);
+      window.addEventListener("mousemove", onPointerMove);
+      window.addEventListener("mouseup", onPointerUp);
+
+      photoFrame.addEventListener("touchstart", onPointerDown, { passive: false });
+      window.addEventListener("touchmove", onPointerMove, { passive: false });
+      window.addEventListener("touchend", onPointerUp);
+
+      // --- 3. Zoom with Mouse Wheel ---
+      photoFrame.addEventListener("wheel", (e) => {
+        if (!photoImg.src || photoImg.style.display === "none") return;
+        e.preventDefault();
+        e.stopPropagation();
+        const zoomStep = 0.08;
+        if (e.deltaY < 0) {
+          state.scale = Math.min(state.scale + zoomStep, 3.5);
+        } else {
+          state.scale = Math.max(state.scale - zoomStep, 0.7);
+        }
+        updateTransform();
+      }, { passive: false });
+
+      // --- 4. Mini Toolbar Actions ---
+      btnZoomIn.addEventListener("click", () => {
+        state.scale = Math.min(state.scale + 0.15, 3.5);
+        updateTransform();
+      });
+
+      btnZoomOut.addEventListener("click", () => {
+        state.scale = Math.max(state.scale - 0.15, 0.7);
+        updateTransform();
+      });
+
+      btnRotateCW.addEventListener("click", () => {
+        state.rotation = (state.rotation + 90) % 360;
+        updateTransform();
+      });
+
+      btnRotateCCW.addEventListener("click", () => {
+        state.rotation = (state.rotation - 90 + 360) % 360;
+        updateTransform();
+      });
+
+      btnReset.addEventListener("click", resetState);
+
+      btnChange.addEventListener("click", () => {
+        photoInput.click();
+      });
+    })();
 
   function setImage(box, frame, dataUrl, persist) {
     let img = frame.querySelector('img');

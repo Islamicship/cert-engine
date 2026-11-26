@@ -126,69 +126,89 @@
     <main class="page" spellcheck="false">
       <div class="content">
         <!-- ================= HEADER: photo | title | logo ================= -->
-        <header class="header">
-          <div
-            class="upload photo is-empty"
-            id="photo-box"
-            data-label="photo"
-            role="button"
-            tabindex="0"
-            aria-label="Upload photo"
-          >
-            <div class="frame">
-              <span class="hint">Click to<br />upload photo</span>
-            </div>
-            <input
-              type="file"
-              accept="image/*"
-              tabindex="-1"
-              aria-hidden="true"
-            />
-          </div>
+    <header class="header">
+      
+      <!-- 1. PHOTO BOX (Outer: 35.82mm x 41.48mm) -->
+      <div
+        class="upload photo is-empty"
+        id="photo-box"
+        data-label="photo"
+        role="button"
+        tabindex="0"
+        aria-label="Upload photo"
+      >
+        <!-- Frame (Inner Cut: strictly 29.60mm x 37.00mm) -->
+        <div class="frame" id="photo-frame">
+          <!-- Dynamic Candidate Photo -->
+          <img id="photo-img" class="photo-img" alt="Candidate Photo" />
+          <span class="hint">Click to<br />upload photo</span>
+        </div>
 
-          <div class="title">
-            <div
-              class="ar fit"
-              lang="ar"
-              dir="rtl"
-              data-unlockable
-              data-filter="arabic"
-              data-max="40"
-              data-collapse
-            >
-              شهادة
-            </div>
-            <div
-              class="en fit"
-              data-unlockable
-              data-filter="english-text"
-              data-max="40"
-              data-collapse
-            >
-              CERTIFICATION
-            </div>
-          </div>
+        <!-- Hidden File Input (ID 'photo-file-input' assign kiya taake JS target kare) -->
+        <input
+          id="photo-file-input"
+          type="file"
+          accept="image/*"
+          tabindex="-1"
+          aria-hidden="true"
+        />
 
-          <div
-            class="upload logo"
-            id="logo-box"
-            data-label="logo"
-            role="button"
-            tabindex="0"
-            aria-label="Upload logo"
-          >
-            <div class="frame">
-              <img src="assets/logo.png" alt="Logo" />
-              <span class="hint">Click to<br />upload logo</span>
-            </div>
-            <input
-              type="file"
-              accept="image/*"
-              tabindex="-1"
-              aria-hidden="true"
-            />
-          </div>
-        </header>
+        <!-- FLOATING CONTROLS (Hover par show hoga, Print me gayab) -->
+        <div class="photo-toolbar" id="photo-toolbar">
+          <button type="button" id="btnRotateCCW" title="Rotate Left 90°">⟲</button>
+          <button type="button" id="btnRotateCW" title="Rotate Right 90°">⟳</button>
+          <button type="button" id="btnZoomIn" title="Zoom In (+)">+</button>
+          <button type="button" id="btnZoomOut" title="Zoom Out (−)">−</button>
+          <button type="button" id="btnResetPhoto" title="Reset Position">↺</button>
+          <button type="button" id="btnChangePhoto" title="Change Photo">📁</button>
+        </div>
+      </div>
+
+      <!-- 2. TITLE (BILKUL UNTOUCHED - NO CHANGE) -->
+      <div class="title">
+        <div
+          class="ar fit"
+          lang="ar"
+          dir="rtl"
+          data-unlockable
+          data-filter="arabic"
+          data-max="40"
+          data-collapse
+        >
+          شهادة
+        </div>
+        <div
+          class="en fit"
+          data-unlockable
+          data-filter="english-text"
+          data-max="40"
+          data-collapse
+        >
+          CERTIFICATION
+        </div>
+      </div>
+
+      <!-- 3. LOGO (BILKUL UNTOUCHED - NO CHANGE) -->
+      <div
+        class="upload logo"
+        id="logo-box"
+        data-label="logo"
+        role="button"
+        tabindex="0"
+        aria-label="Upload logo"
+      >
+        <div class="frame">
+          <img src="assets/logo.png" alt="Logo" />
+          <span class="hint">Click to<br />upload logo</span>
+        </div>
+        <input
+          type="file"
+          accept="image/*"
+          tabindex="-1"
+          aria-hidden="true"
+        />
+      </div>
+    </header>
 
         <!-- ================= DATA GRID: 10 blocks x 2 tiers =================
          Every tier = 4-column grid: 54.224mm | 44.201mm | 44.201mm | 54.224mm = 196.85mm
