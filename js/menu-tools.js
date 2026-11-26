@@ -527,6 +527,7 @@
     const X = window.CertExport;
     if (!X) { toast('Export module is not loaded (js/export-tools.js)'); return; }
     if (exporting) { toast('An export is already running…'); return; }
+    if (!(await printGuard('Save as ' + kind.toUpperCase()))) return;
     exporting = true;
     flush();
     toast('Rendering ' + kind.toUpperCase() + ' at 300 DPI…');
@@ -540,6 +541,61 @@
       exporting = false;
       restoreEd();
     }
+  }
+
+    
+  const SAMPLE_RIBBON = ['www.company.com', '@company', 'facebook.com/company'];
+  let guarding = false;
+
+  function defaultsFound() {
+    flush();
+    const g = (sel) => { const n = q1(sel); return n ? n.textContent.trim() : ''; };
+    const found = [];
+
+    const nameEn = g('.name-en');
+    if (!nameEn || nameEn === DEFAULTS.nameEn) found.push('Name (EN)');
+    const nameAr = g('.name-ar');
+    if (!nameAr || nameAr === DEFAULTS.nameAr) found.push('Name (AR)');
+    const id = g('[data-sync="id"]');
+    if (!id || /^0+$/.test(id)) found.push('ID No.');
+    const pp = g('[data-sync="passport"]');
+    if (!pp || pp === DEFAULTS.passport) found.push('Passport number');
+    const seq = g('[data-sync="cert-seq"]');
+    if (!seq || /^0+$/.test(seq)) found.push('Certification sequence');
+    if ($('photo-box') && $('photo-box').classList.contains('is-empty')) found.push('Photo');
+
+    // Layout placeholders (ribbon + disclaimer)
+    const ribbon = qa('.ribbon [data-unlockable]').map((n) => n.textContent.trim());
+    if (ribbon.some((t) => SAMPLE_RIBBON.indexOf(t) >= 0)) found.push('Footer contact details');
+    const note = qa('.note p').map((n) => n.textContent).join(' ');
+    if (/Company Name/i.test(note) || note.indexOf('\u0627\u0633\u0645 \u0627\u0644\u0634\u0631\u0643\u0629') >= 0) {
+      found.push('Disclaimer company name');
+    }
+
+    // DOB 01/01/2000 asli records mein bhi hota hai: sirf yaad dilao, alag se mention
+    if (g('#dob-en') === DEFAULTS.dob) found.push('Date of Birth (01/01/2000: check if intended)');
+    return found;
+  }
+
+  // true = aage barho, false = user ne cancel kiya
+  async function printGuard(action) {
+    if (guarding) return false;
+    const found = defaultsFound();
+    if (!found.length) return true;
+    guarding = true;
+    try {
+      return await confirmDialog(
+        action,
+        'These fields still look like default / sample data: ' + found.join(', ') + '. Continue anyway?',
+        'Continue anyway'
+      );
+    } finally {
+      guarding = false;
+    }
+  }
+
+  async function printWithGuard() {
+    if (await printGuard('Print')) window.print();
   }
 
   /* ---------- Send To ---------- */
@@ -1436,7 +1492,7 @@
         { label: 'Desktop Shortcut (Install App)', icon: 'monitor', tip: 'Install this app on your computer', run: installApp, disabled: () => !installAvailable() }
       ] },
       '-',
-      { label: 'Print / Save as PDF', icon: 'print', kbd: 'Ctrl+P', tip: 'Open the print dialog', run: () => window.print() },
+      { label: 'Print / Save as PDF', icon: 'print', kbd: 'Ctrl+P', tip: 'Open the print dialog', run: printWithGuard },
       { label: 'Exit / Reset Form…', icon: 'exit', tip: 'Wipe all saved data and reload blank', run: factoryReset }
     ] },
     { id: 'edit', host: 'bar', label: 'Edit', access: 'e', alt: 'ترمیم', items: [
@@ -1737,7 +1793,7 @@
     attachMenu({ host: 'prop', btn: $('pb-size-btn'), wrap: $('pb-size-dd'), defs: PROP_SIZE });
     attachMenu({ host: 'prop', btn: $('pb-view-btn'), wrap: $('pb-view-dd'), defs: PROP_VIEW });
 
-    if (pb.print) pb.print.addEventListener('click', () => window.print());
+    if (pb.print) pb.print.addEventListener('click', printWithGuard);
     if (pb.undo) pb.undo.addEventListener('click', undo);
     if (pb.redo) pb.redo.addEventListener('click', redo);
 
@@ -2171,7 +2227,8 @@
         else if (k === '1' && plain) { e.preventDefault(); setViewMode('actual'); }
         else if (k === '+') { e.preventDefault(); zoomIn(); }
         else if (k === '-') { e.preventDefault(); zoomOut(); }
-        return;                                   // Ctrl+P, Ctrl+X/C/V/A etc: native
+        else if (k === 'p') { e.preventDefault(); printWithGuard(); }
+        return;                                   // Ctrl+X/C/V/A etc: native
       }
 
       // ---- single-key tools (only when not typing) ----

@@ -19,6 +19,7 @@
   --danger:  #d93025;
   --text-gray:  #727376;   /* company name (EN) + disclaimer (EN) */
   --text-green: #0D9A70;   /* company name (AR) + disclaimer (AR) */
+  --text-field: #373435;
 
   /* Badge font: DIN Next LT Arabic Bold (licensed font: must be installed or self-hosted, see @font-face) */
   --font-din-en: 'DIN Next LT Arabic', 'DIN Alternate', 'Bahnschrift', 'Inter', sans-serif;
@@ -508,7 +509,7 @@ body {
   font-family: Arial, sans-serif !important;
   font-size: 8pt;
   font-weight: normal !important;
-  color: #373435;
+  color: var(--text-field);
   line-height: var(--tier-h);
   text-align: center;
   padding: 0 1.5mm;
@@ -543,7 +544,7 @@ body {
   border-radius: 1px;
   outline: none;
   background: transparent;
-  color: #373435;
+  color: var(--text-field);
   font: inherit;
   line-height: var(--tier-h);
   text-align: center;
@@ -765,6 +766,10 @@ body {
     break-after: avoid;
     break-inside: avoid;
   }
+    .page {
+    background-size: 210mm 297mm;
+    background-position: 0 0;
+  }
 
   /* Ribbon pinned to the bottom edge of the PAPER: no white strip below it, and the 0.5mm safety
      above no longer shifts it. Header + grid + disclaimer = 282.627mm, so the ribbon starts exactly
@@ -793,7 +798,7 @@ body {
     text-align: center;
     font-family: Arial, sans-serif !important;
     font-size: 8pt;
-    color: #000;
+    color: var(--text-field);
   }
   .combo-btn, .combo-menu, .ctx-menu { display: none !important; }
 }
@@ -853,11 +858,11 @@ body {
   left: 50%;
   max-width: none;
   display: none;
-  #photo-box:not(.is-empty) #photo-img.photo-img { display: block; }
   pointer-events: none;
   transform-origin: center center;
   will-change: transform;
 }
+#photo-box:not(.is-empty) #photo-img.photo-img { display: block; }
 
 /* Floating Controls Toolbar */
 #photo-toolbar.photo-toolbar {
