@@ -159,6 +159,7 @@
       const btnChange = document.getElementById("btnChangePhoto");
 
       const state = { scale: 1.0, x: 0, y: 0, rotation: 0 };
+      const PAN_SPEED = 0.6;
       let drag = null;          // { cx, cy, x0, y0, moved } : cx/cy SCREEN px, x0/y0 pan-state at pointer-down
       let dragMoved = false;    // pan ke baad aane wala click swallow karne ke liye
 
