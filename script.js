@@ -215,9 +215,9 @@
         const dx = p.x - drag.cx, dy = p.y - drag.cy;             // screen px, POINTER-DOWN se naapa
         if (!drag.moved && Math.hypot(dx, dy) > 3) drag.moved = true;
         if (!drag.moved) return;                                   // click jitter photo ko nahi hilata
-        const s = certScale();                                     // Fit Width par layout px = screen px / scale
-        state.x = drag.x0 + dx / s;
-        state.y = drag.y0 + dy / s;
+        const k = PAN_SPEED / certScale();                         // scale compensation + speed factor
+        state.x = drag.x0 + dx * k;
+        state.y = drag.y0 + dy * k;
         updateTransform();
       }
 
