@@ -853,6 +853,7 @@ body {
   left: 50%;
   max-width: none;
   display: none;
+  #photo-box:not(.is-empty) #photo-img.photo-img { display: block; }
   pointer-events: none;
   transform-origin: center center;
   will-change: transform;
