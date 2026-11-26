@@ -34,7 +34,7 @@
  *   logo), or when you add/remove files from the lists below.
  */
 
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const CACHE_PREFIX = 'cert-engine-';
 const CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
 
@@ -53,10 +53,11 @@ const CORE = [
   './script.js',
   './css/theme.css',
   './css/viewport.css',
-  './css/menu-tools.css',    // <-- Add this
+  './css/menu-tools.css',
   './js/theme.js',
   './js/viewport.js',
-  './js/menu-tools.js',     // <-- Add this
+  './js/menu-tools.js',
+  './js/export-tools.js',
   './js/pwa.js',
   './manifest.webmanifest'
 ].map(toUrl);

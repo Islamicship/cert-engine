@@ -702,7 +702,7 @@
 
     /* Phones: a 72px left rail would eat 20% of a 360px screen, so the palette
        turns into a horizontal strip under the header and the canvas keeps normal gutters. */
-    #viewport { padding-left: 12px; padding-top: 74px; }
+    #viewport { padding-left: 12px; padding-top: 84px; }
     .floating-palette {
       left: 8px;
       flex-direction: row;

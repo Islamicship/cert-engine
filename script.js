@@ -338,7 +338,6 @@
     if (el.hasAttribute('data-placeholder') && el.firstChild && el.textContent === '') el.textContent = '';
   }
 
-
   // DOB: sirf digits; 24012000 -> 24/01/2000 (slash tab lagta hai jab agla digit aaye: backspace smooth rehta hai)
   function maskDob(digits) {
     let s = digits.slice(0, 2);
@@ -529,7 +528,7 @@
   function checkExact(el, strict) {
     const len = el.textContent.length;
     const bad = len !== 0 && len !== parseInt(el.getAttribute('data-exact'), 10);
-    if (bad && !strict) return;
+    if (bad && !strict) return;                       // typing ke dauran red sirf blur par
     const key = el.getAttribute('data-sync');
     const group = key ? document.querySelectorAll('[data-sync="' + key + '"]') : [el];
     group.forEach((n) => n.classList.toggle('invalid', bad));
@@ -1136,9 +1135,10 @@
       requestAnimationFrame(() => selectAllContent(nextEl));
     });
   }
-
-  // spellcheck/autocorrect/grammar-extensions OFF on every editable cell and nationality input.
-  // Attributes only: no effect on persistence, document order or print.
+  
+  /* ----------------------------------------------------------
+   * 6. Init + print helper
+   * ---------------------------------------------------------- */
   function hardenEditors() {
     persistNodes().forEach((el) => {
       el.setAttribute('spellcheck', 'false');
@@ -1149,17 +1149,14 @@
       el.setAttribute('data-enable-grammarly', 'false');
     });
   }
-  
-  /* ----------------------------------------------------------
-   * 6. Init + print helper
-   * ---------------------------------------------------------- */
+
   function init() {
     document.querySelectorAll('.upload').forEach(initUploadBox);
     initImagePaste();
     initCtxMenu();
     hardenEditors();
     // Disclaimer uses white-space: pre-wrap, so HTML indentation must not become visible lines
-    document.querySelectorAll('[data-multiline]').forEach((el) => { el.textContent = el.textContent.trim(); });
+    document.querySelectorAll('[data-multiline]').forEach((el) => { el.textContent = el.textContent.trim().replace(/\s*\n\s*/g, ' '); });
     loadSaved();                    // text + locks: nationality/checks se PEHLE
     initLockToggle();
     initNationality();
@@ -1190,6 +1187,14 @@
         syncNationality('en');
         fitAll();
         saveNow();
+      },
+      fitAll: fitAll,
+      save: saveNow,
+      clearPhoto: function () {
+        const box = $('photo-box');
+        if (!box || isLocked(box) || box.classList.contains('is-empty')) return false;
+        clearImage(box);
+        return true;
       }
     };
     

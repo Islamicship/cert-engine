@@ -236,6 +236,8 @@
     'new': 'M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z M14 3v5h5 M12 12v6 M9 15h6',
     'open': 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
     'save': 'M5 3h11l4 4v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z M8 3v5h7V3 M8 21v-7h8v7',
+    'pdf': 'M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z M14 3v5h5 M9 13h6 M9 17h4',
+    'image': 'M4 5h16v14H4z M4 16l5-5 4 4 3-3 4 4 M9 9h.01',
     'send': 'M22 2L11 13 M22 2l-7 20-4-9-9-4z',
     'mail': 'M3 5h18v14H3z M3 7l9 6 9-6',
     'download': 'M12 3v12 M7 10l5 5 5-5 M4 21h16',
@@ -446,11 +448,7 @@
     );
     if (!ok) return;
     guarded(() => applyRecord(DEFAULTS));
-    const box = $('photo-box');
-    if (box && !box.classList.contains('is-empty') && !box.classList.contains('is-locked')) {
-      // script.js already clears the image on Delete: reuse that path instead of reaching into its closures.
-      box.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true, cancelable: true }));
-    }
+    if (window.CertApp && typeof window.CertApp.clearPhoto === 'function') window.CertApp.clearPhoto();
     toast('Blank record ready');
   }
 
@@ -518,6 +516,28 @@
       else if (r === 'invalid' || r === 'too-big') notes.push(key + ' skipped (bad image)');
     }
     toast('Backup imported' + (notes.length ? ' — ' + notes.join(', ') : ''));
+  }
+
+  /* ---------- Save as PDF / JPG (js/export-tools.js renders; this only drives the UI) ---------- */
+  let exporting = false;
+
+  async function exportAs(kind) {
+    const X = window.CertExport;
+    if (!X) { toast('Export module is not loaded (js/export-tools.js)'); return; }
+    if (exporting) { toast('An export is already running…'); return; }
+    exporting = true;
+    flush();
+    toast('Rendering ' + kind.toUpperCase() + ' at 300 DPI…');
+    try {
+      const r = await (kind === 'pdf' ? X.savePdf() : X.saveJpg());
+      toast(kind.toUpperCase() + ' saved: ' + r.name);
+    } catch (err) {
+      console.error('[export]', err);
+      toast('Export failed: ' + (err && err.message ? err.message : 'unknown error'));
+    } finally {
+      exporting = false;
+      restoreEd();
+    }
   }
 
   /* ---------- Send To ---------- */
@@ -1276,7 +1296,7 @@
     ['Menus', [['Alt + F', 'File'], ['Alt + E', 'Edit'], ['Alt + V', 'View'], ['Alt + D', 'Data Tools'], ['Alt + H', 'Help'],
       ['↑ ↓', 'Move through the menu'], ['← →', 'Switch menu / open or close submenu'],
       ['Enter', 'Run the highlighted item'], ['Esc', 'Close menu, back to the cell']]],
-    ['File', [['Ctrl + N', 'New record'], ['Ctrl + O', 'Open / import JSON'], ['Ctrl + S', 'Save backup'], ['Ctrl + P', 'Print / Save as PDF']]],
+    ['File', [['Ctrl + N', 'New record'], ['Ctrl + O', 'Open / import JSON'], ['Ctrl + S', 'Save as PDF (300 DPI)'], ['Ctrl + Shift + S', 'Save as JPG (300 DPI)'], ['Ctrl + P', 'Print / Save as PDF']]],
     ['Edit', [['Ctrl + Z', 'Undo'], ['Ctrl + Y', 'Redo'], ['Ctrl + X / C / V', 'Cut / Copy / Paste'], ['Ctrl + F', 'Find and Replace']]],
     ['View', [['F4', 'Fit to width'], ['Shift + F4', 'Fit whole page'], ['Ctrl + 1', 'Actual size (100%)'], ['Ctrl + +  /  Ctrl + −', 'Zoom in / out']]],
     ['Data', [['F5', 'Recalculate dates & sync']]],
@@ -1319,7 +1339,7 @@
       'Dates: issue date is today, expiry is 29 days later. F5 recalculates them.',
       'Printing: Ctrl+P. The sheet is A4 portrait with zero margin; in the browser print dialog choose Scale 100% and Margins: None.',
       'Batch: Data Tools → Batch CSV Import loads many people; ◀ ▶ in the menu bar page through them.',
-      'Everything is saved in this browser automatically. File → Save Backup As (Ctrl+S) writes a JSON copy you can restore with File → Open.'
+      'Everything is saved in this browser automatically. File → Save Backup As writes a JSON copy you can restore with File → Open.'
     ];
     const ol = mk('ol', 'mt-guide');
     items.forEach((t) => ol.append(mk('li', '', t)));
@@ -1404,7 +1424,9 @@
     { id: 'file', host: 'bar', label: 'File', access: 'f', alt: 'فائل', items: [
       { label: 'New Record', icon: 'new', kbd: 'Ctrl+N', tip: 'Reset record fields and photo to defaults', run: newRecord },
       { label: 'Open / Import JSON…', icon: 'open', kbd: 'Ctrl+O', tip: 'Load a backup (.json / .cert)', run: importFile },
-      { label: 'Save Backup As…', icon: 'save', kbd: 'Ctrl+S', tip: 'Download field values and photos as JSON', run: exportBackup },
+      { label: 'Save as PDF (High Quality)', icon: 'pdf', kbd: 'Ctrl+S', tip: 'A4 PDF, 300 DPI, one click', run: () => exportAs('pdf') },
+      { label: 'Save as JPG (High Quality)', icon: 'image', kbd: 'Ctrl+Shift+S', tip: 'A4 JPG, 2480 x 3508 px (300 DPI)', run: () => exportAs('jpg') },
+      { label: 'Save Backup As…', icon: 'save', tip: 'Download field values and photos as JSON', run: exportBackup },
       '-',
       { label: 'Send To', icon: 'send', sub: [
         { label: 'Mail Recipient…', icon: 'mail', tip: 'Open your mail app with the certificate details', run: mailRecipient },
@@ -2142,7 +2164,7 @@
         else if (k === 'y') { e.preventDefault(); redo(); }
         else if (k === 'n' && plain) { e.preventDefault(); newRecord(); }
         else if (k === 'o' && plain) { e.preventDefault(); importFile(); }
-        else if (k === 's' && plain) { e.preventDefault(); exportBackup(); }
+        else if (k === 's') { e.preventDefault(); exportAs(e.shiftKey ? 'jpg' : 'pdf'); }
         else if (k === 'f' && plain) { e.preventDefault(); openFind(); }
         else if (k === '1' && plain) { e.preventDefault(); setViewMode('actual'); }
         else if (k === '+') { e.preventDefault(); zoomIn(); }

@@ -46,6 +46,7 @@
     <script src="js/viewport.js" defer></script>
     <script src="script.js" defer></script>
     <script src="js/menu-tools.js" defer></script>
+    <script src="js/export-tools.js" defer></script>
     <script src="js/pwa.js" defer></script>
   </head>
   <body>
@@ -209,9 +210,9 @@
 
          Do NOT put whitespace between the <span>s of a segmented cell: it would render as a gap. -->
         <section class="grid">
-          <!-- 1. Certification No.  CR01IH | 2611 (auto YYMM) | 000000 -->
+          <!-- 1. Certification No. (Rows 1 & 2) -->
           <div class="block">
-            <div class="tier ar">
+            <div class="tier ar" data-r="1">
               <div class="blank c1" aria-hidden="true"></div>
               <div class="val c2 cert" lang="ar" dir="ltr">
                 <span
@@ -238,7 +239,7 @@
                 رقم الشهادة
               </div>
             </div>
-            <div class="tier en">
+            <div class="tier en" data-r="2">
               <div class="badge c1 fit" data-unlockable>Certification No.</div>
               <div class="blank c2" aria-hidden="true"></div>
               <div class="val c3 cert">
@@ -265,9 +266,9 @@
             </div>
           </div>
 
-          <!-- 2. Date of Issue -->
+          <!-- 2. Date of Issue (Rows 3 & 4) -->
           <div class="block">
-            <div class="tier ar">
+            <div class="tier ar" data-r="3">
               <div class="blank c1" aria-hidden="true"></div>
               <div class="val c2 auto" lang="ar" dir="ltr" data-auto="issue-ar">
                 00/00/1448
@@ -277,7 +278,7 @@
                 تاريخ إصدار الشهادة
               </div>
             </div>
-            <div class="tier en">
+            <div class="tier en" data-r="4">
               <div class="badge c1">Date of Issue</div>
               <div class="blank c2" aria-hidden="true"></div>
               <div class="val c3 auto" data-auto="issue-en">DD/MM/YYYY</div>
@@ -285,9 +286,9 @@
             </div>
           </div>
 
-          <!-- 3. Date of Expiry -->
+          <!-- 3. Date of Expiry (Rows 5 & 6) -->
           <div class="block">
-            <div class="tier ar">
+            <div class="tier ar" data-r="5">
               <div class="blank c1" aria-hidden="true"></div>
               <div
                 class="val c2 auto"
@@ -302,7 +303,7 @@
                 تاريخ إنتهاء الشهادة
               </div>
             </div>
-            <div class="tier en">
+            <div class="tier en" data-r="6">
               <div class="badge c1">Date of Expiry</div>
               <div class="blank c2" aria-hidden="true"></div>
               <div class="val c3 auto" data-auto="expiry-en">DD/MM/YYYY</div>
@@ -310,23 +311,23 @@
             </div>
           </div>
 
-          <!-- 4. Name  (Arabic: column 2, Arabic letters only | English: columns 2-4, English letters only.
-                     Both shrink their font automatically when the text is wider than the cell.) -->    <div class="block">
-      <div class="tier ar">
-    <div class="blank c1" aria-hidden="true"></div>
-    <div class="val c2 name-ar" data-placeholder="الاسم الكامل" lang="ar" dir="rtl" data-filter="arabic" data-max="60" data-collapse contenteditable="true">الاسم الكامل</div>
-    <div class="blank c3" aria-hidden="true"></div>
-    <div class="badge c4" lang="ar" dir="rtl">الاسم</div>
-  </div>
-  <div class="tier en">
-    <div class="badge c1">Name</div>
-    <div class="val name-en" data-placeholder="FULL NAME" spellcheck="false" data-filter="english-name" data-max="60" data-collapse contenteditable="true">FULL NAME</div>
-  </div>
-</div>
-
-          <!-- 5. ID No.  first digit fixed "2" + 9 editable digits = 10 -->
+          <!-- 4. Name (Rows 7 & 8) -->
           <div class="block">
-            <div class="tier ar">
+            <div class="tier ar" data-r="7">
+              <div class="blank c1" aria-hidden="true"></div>
+              <div class="val c2 name-ar" data-placeholder="الاسم الكامل" lang="ar" dir="rtl" data-filter="arabic" data-max="60" data-collapse contenteditable="true">الاسم الكامل</div>
+              <div class="blank c3" aria-hidden="true"></div>
+              <div class="badge c4" lang="ar" dir="rtl">الاسم</div>
+            </div>
+            <div class="tier en" data-r="8">
+              <div class="badge c1">Name</div>
+              <div class="val name-en" data-placeholder="FULL NAME" spellcheck="false" data-filter="english-name" data-max="60" data-collapse contenteditable="true">FULL NAME</div>
+            </div>
+          </div>
+
+          <!-- 5. ID No. (Rows 9 & 10) -->
+          <div class="block">
+            <div class="tier ar" data-r="9">
               <div class="blank c1" aria-hidden="true"></div>
               <div class="val c2 idno" lang="ar" dir="ltr">
                 <span class="seg-static">2</span
@@ -343,7 +344,7 @@
               <div class="blank c3" aria-hidden="true"></div>
               <div class="badge c4" lang="ar" dir="rtl">رقم الهوية</div>
             </div>
-            <div class="tier en">
+            <div class="tier en" data-r="10">
               <div class="badge c1">ID No.</div>
               <div class="blank c2" aria-hidden="true"></div>
               <div class="val c3 idno">
@@ -362,9 +363,9 @@
             </div>
           </div>
 
-          <!-- 6. Passport number (12pt) -->
+          <!-- 6. Passport number (Rows 11 & 12) -->
           <div class="block">
-            <div class="tier ar">
+            <div class="tier ar" data-r="11">
               <div class="blank c1" aria-hidden="true"></div>
               <div
                 class="val c2 upper passport"
@@ -381,7 +382,7 @@
                 رقم الجواز
               </div>
             </div>
-            <div class="tier en">
+            <div class="tier en" data-r="12">
               <div class="badge c1 fit" data-unlockable>Passport number</div>
               <div class="blank c2" aria-hidden="true"></div>
               <div
@@ -396,11 +397,9 @@
             </div>
           </div>
 
-          <!-- 7. Date of Birth
-           English = Gregorian, digits only, slashes added automatically (DD/MM/YYYY).
-           Arabic  = Hijri YYYY/MM/DD, computed automatically, read-only. -->
+          <!-- 7. Date of Birth (Rows 13 & 14) -->
           <div class="block">
-            <div class="tier ar">
+            <div class="tier ar" data-r="13">
               <div class="blank c1" aria-hidden="true"></div>
               <div class="val c2 auto" id="dob-ar" lang="ar" dir="ltr" data-placeholder="YYYY/MM/DD"></div>
               <div class="blank c3" aria-hidden="true"></div>
@@ -408,7 +407,7 @@
                 تاريخ الميلاد
               </div>
             </div>
-            <div class="tier en">
+            <div class="tier en" data-r="14">
               <div class="badge c1 fit" data-unlockable>Date of Birth</div>
               <div class="blank c2" aria-hidden="true"></div>
               <div
@@ -425,11 +424,9 @@
             </div>
           </div>
 
-          <!-- 8. Nationality
-           BOTH tiers are dropdowns: pick from either list (the other tier fills automatically)
-           or type a custom value (English letters in EN, Arabic letters in AR). -->
+          <!-- 8. Nationality (Rows 15 & 16) -->
           <div class="block">
-            <div class="tier ar">
+            <div class="tier ar" data-r="15">
               <div class="blank c1" aria-hidden="true"></div>
               <div class="val c2 combo" id="nat-ar-combo">
                 <input
@@ -470,7 +467,7 @@
                 الجنسية
               </div>
             </div>
-            <div class="tier en">
+            <div class="tier en" data-r="16">
               <div class="badge c1 fit" data-unlockable>Nationality</div>
               <div class="blank c2" aria-hidden="true"></div>
               <div class="val c3 combo" id="nat-en-combo">
@@ -509,9 +506,9 @@
             </div>
           </div>
 
-          <!-- 9. Requested By  (values are part of the lock layout) -->
+          <!-- 9. Requested By (Rows 17 & 18) -->
           <div class="block">
-            <div class="tier ar">
+            <div class="tier ar" data-r="17">
               <div class="blank c1" aria-hidden="true"></div>
               <div class="val c2" lang="ar" dir="rtl" data-unlockable>
                 جهة داخلية
@@ -521,7 +518,7 @@
                 الجهة الطالبة
               </div>
             </div>
-            <div class="tier en">
+            <div class="tier en" data-r="18">
               <div class="badge c1 fit" data-unlockable>Requested By</div>
               <div class="blank c2" aria-hidden="true"></div>
               <div class="val c3" data-unlockable>Internal Entity</div>
@@ -529,9 +526,9 @@
             </div>
           </div>
 
-          <!-- 10. Certification Purpose  (values are part of the lock layout) -->
+          <!-- 10. Certification Purpose (Rows 19 & 20) -->
           <div class="block">
-            <div class="tier ar">
+            <div class="tier ar" data-r="19">
               <div class="blank c1" aria-hidden="true"></div>
               <div class="val c2" lang="ar" dir="rtl" data-unlockable>
                 اصدار ترخيص
@@ -541,7 +538,7 @@
                 الغرض من الطلب
               </div>
             </div>
-            <div class="tier en">
+            <div class="tier en" data-r="20">
               <div class="badge c1 fit" data-unlockable>
                 Certification Purpose
               </div>

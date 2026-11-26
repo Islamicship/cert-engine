@@ -36,18 +36,18 @@
   /* Vertical budget */
   --header-h:  61.348mm;
   --grid-h:    calc(20 * var(--tier-h) + 19 * var(--gap));   /* 194.522mm */
-  --note-h:    26.786mm;   /* 41.13 - ribbon-h (keeps the vertical budget at 297mm) */
-  /* Badge text lift (bottom padding; text moves up by HALF of this value).
-     Measured from the "Passport number" screenshot: cap-height centre was 0.415mm too low -> 0.3 + 2 x 0.415 = ~1.13mm.
-     Text still low -> increase; too high -> decrease. EN and AR can be tuned separately. */
+  --note-h:    26.735mm;   /* Blueprint exact orange block height */
   --badge-pb-en: 1.15mm;
   --badge-pb-ar: 1.15mm;
-  --note-ar-w: 100mm;                  /* Arabic disclaimer box width (2 lines @ 9pt). Wider = fewer lines; right edge stays fixed */
-  --ribbon-h:  14.344mm;   /* reference banner: 209.711 x 14.344mm */
+  --note-ar-w: 100mm;                  
+  --ribbon-h:  14.395mm;   /* Exact remainder: 61.348 + 194.522 + 26.735 + 14.395 = 297.000mm */   /* reference banner: 209.711 x 14.344mm */
 
   /* Header objects */
-  --photo-top: 15.44mm;
-  --title-cx:  110.35mm;                /* horizontal centre of both titles */
+  --photo-top:   15.223mm;
+  --photo-left:  10.878mm;
+  --logo-top:    15.471mm;
+  --logo-right:  8.791mm;
+  --title-cx:    110.35mm;                /* horizontal centre of both titles */
 }
 
 /* DIN Next LT Arabic Bold.
@@ -250,9 +250,7 @@ body {
   .invalid { box-shadow: inset 0 -2px 0 var(--danger); }
 }
 
-/* ---------- Ghost placeholders (SCREEN ONLY) ----------
-   Text lives in data-placeholder, never in textContent: nothing to persist, export or print.
-   Fixed rgba, NOT a --ws-* token: .page is locked to the light theme. */
+/* ---------- Ghost placeholders (SCREEN ONLY) ---------- */
 @media screen {
   [data-placeholder]:empty::before {
     content: attr(data-placeholder);
@@ -312,25 +310,24 @@ body {
 }
 
 /* Photo: outer 35.817 x 41.481mm; inner image area 27.686 x 35.306mm, centred */
-/* Photo: Outer Box (Screenshot position & size) */
+/* Photo: Outer Box (Exact: 35.82 x 41.48mm, Left: 10.878mm, Top: 15.223mm) */
 .photo {
   position: absolute;
-  left: 8.066mm;                         /* Screenshot: 43.88mm - 35.814mm */
+  left: var(--photo-left);
   top: var(--photo-top);
-  width: 35.814mm;
-  height: 41.481mm;
+  width: 35.82mm;
+  height: 41.48mm;
   border: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-/* Inner Frame: Height 37.042mm, width proportional */
+/* Inner Frame: Blueprint Lock (29.60mm x 37.00mm) */
 .photo .frame {
   flex: none;
-  height: 37.042mm;
-  width: auto;
-  max-width: calc(35.814mm - 2mm);        /* Outer border ke andar rahay */
+  width: 29.60mm;
+  height: 37.00mm;
   border: none;
   display: flex;
   align-items: center;
@@ -338,24 +335,28 @@ body {
 }
 
 .photo .frame img {
-  height: 37.042mm !important;
-  width: auto !important;
-  max-width: 100%;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 29.60mm;
+  max-height: 37.00mm;
   display: block;
   object-fit: contain;                    /* Aspect ratio intact */
 }
 
-/* Logo: 20.587 x 31.457mm (portrait). Default image = assets/logo.png (set in index.html);
-   click / right-click still replaces it. No border once an image is present, so the PNG fills the exact box. */
+/* Logo: (Exact: 20.58 x 31.44mm, Right: 8.791mm, Top: 15.471mm) */
 .logo {
   position: absolute;
-  right: var(--pad-x);
-  top: var(--photo-top);
-  width: 20.587mm;
-  height: 31.457mm;
+  right: var(--logo-right);
+  top: var(--logo-top);
+  width: 20.58mm;
+  height: 31.44mm;
   border: 1px dashed var(--border);
 }
-.logo .frame img { object-fit: contain; }
+.logo .frame img { 
+  width: 100%; 
+  height: 100%; 
+  object-fit: contain; 
+}
 .logo:not(.is-empty) { border-color: transparent; border-width: 0; }
 
 /* Titles: Arabic box 75.171 x 10.322mm | English box 97.487 x 5.359mm */
@@ -386,33 +387,59 @@ body {
    DATA GRID  (20 tiers, 7.923mm each, 1.898mm gaps)
    ========================================================== */
 .grid {
-  width: var(--row-w);
-  height: var(--grid-h);
-  margin-left: var(--pad-x);
-  display: flex; flex-direction: column;
+  width: 210mm;                      /* Sheet ki full boundary */
+  height: var(--grid-h);             /* 194.522mm vertical lock */
+  margin-left: 0;                    /* Zero-base coordinate */
+  display: flex; 
+  flex-direction: column;
+  align-items: flex-start;           /* Har tier apni width khud tay kare */
   gap: var(--gap);
 }
-.block { display: contents; }          /* tiers are direct flex items: uniform 1.898mm gap */
+.block { display: contents; }
 
-/* Tier = 4-column grid */
+/* Tier Base Geometry */
 .tier {
   display: grid;
   grid-template-columns: var(--col-badge) var(--col-mid) var(--col-mid) var(--col-badge);
   grid-template-rows: var(--tier-h);
-  width: var(--row-w);
   height: var(--tier-h);
   direction: ltr;
   background: transparent;
   overflow: hidden;
   position: relative;
 }
-/* Outline around the WHOLE tier, drawn as an overlay so geometry stays 196.85mm x 7.923mm. */
+
+/* Outline around the WHOLE tier */
 .tier::after {
   content: "";
   position: absolute; inset: 0;
   border: 1px solid var(--border);
   pointer-events: none;
 }
+
+/* ==========================================================
+   BLUEPRINT EXACT 20-ROW MM MAP (Left Padding & Exact Width)
+   ========================================================== */
+.tier[data-r="1"]  { margin-left: 6.388mm; width: 196.807mm; }
+.tier[data-r="2"]  { margin-left: 6.706mm; width: 196.645mm; }
+.tier[data-r="3"]  { margin-left: 6.534mm; width: 196.645mm; }
+.tier[data-r="4"]  { margin-left: 6.826mm; width: 196.645mm; }
+.tier[data-r="5"]  { margin-left: 6.461mm; width: 196.807mm; }
+.tier[data-r="6"]  { margin-left: 6.753mm; width: 196.645mm; }
+.tier[data-r="7"]  { margin-left: 6.741mm; width: 196.807mm; }
+.tier[data-r="8"]  { margin-left: 7.032mm; width: 196.620mm; }
+.tier[data-r="9"]  { margin-left: 6.887mm; width: 196.645mm; }
+.tier[data-r="10"] { margin-left: 7.178mm; width: 196.646mm; }
+.tier[data-r="11"] { margin-left: 6.887mm; width: 196.808mm; }
+.tier[data-r="12"] { margin-left: 7.178mm; width: 196.620mm; }
+.tier[data-r="13"] { margin-left: 6.814mm; width: 196.807mm; }
+.tier[data-r="14"] { margin-left: 7.105mm; width: 196.645mm; }
+.tier[data-r="15"] { margin-left: 6.960mm; width: 196.807mm; }
+.tier[data-r="16"] { margin-left: 7.251mm; width: 196.646mm; }
+.tier[data-r="17"] { margin-left: 6.814mm; width: 196.807mm; }
+.tier[data-r="18"] { margin-left: 7.105mm; width: 196.645mm; }
+.tier[data-r="19"] { margin-left: 6.960mm; width: 196.645mm; }
+.tier[data-r="20"] { margin-left: 7.251mm; width: 196.645mm; }
 
 .c1 { grid-column: 1; }
 .c2 { grid-column: 2; }
@@ -437,15 +464,16 @@ body {
 /* Green badge: static, not selectable (unless unlocked).
    English text: left, 3.262mm padding | Arabic text: right, 3.749mm padding */
 .badge {
-  height: var(--tier-h);
+  position: relative;                
+  z-index: 2;
   background: var(--green);
   color: #fff;
   font-weight: 700;
   display: flex;
-  align-items: center;                 /* true vertical centring: no line-height dependency */
-  line-height: 1;                      /* reset baseline offset */
+  align-items: center;
+  line-height: 1;
   padding-top: 0;
-  padding-bottom: var(--badge-pb);     /* optical lift: DIN's baseline sits low in its line box (see :root --badge-pb-*) */
+  padding-bottom: var(--badge-pb);
   white-space: nowrap; overflow: hidden;
   user-select: none; -webkit-user-select: none;
   cursor: default;
@@ -479,7 +507,7 @@ body {
   font-family: Arial, sans-serif !important;
   font-size: 8pt;
   font-weight: normal !important;
-  color: #000;
+  color: #373435;
   line-height: var(--tier-h);
   text-align: center;
   padding: 0 1.5mm;
@@ -509,12 +537,12 @@ body {
   width: 100%;
   height: var(--tier-h);
   margin: 0;
-  padding: 0 7mm;                      /* symmetric: text stays centred, chevron has room */
+  padding: 0 7mm;
   border: none;
   border-radius: 1px;
   outline: none;
   background: transparent;
-  color: #000;
+  color: #373435;
   font: inherit;
   line-height: var(--tier-h);
   text-align: center;
@@ -654,10 +682,12 @@ body {
 /* Region between the last tier and the ribbon: the two paragraphs are centred vertically in it,
    and each paragraph centres its own text vertically, so EN and AR share one horizontal axis. */
 .note {
-  width: var(--row-w);
-  margin-left: var(--pad-x);
-  height: var(--note-h);
-  display: flex; justify-content: space-between; align-items: center;
+  width: 196.645mm;                   /* Row 20 ki exact width */
+  margin-left: 7.251mm;               /* Row 20 ke left edge ke sath 100% align */
+  height: var(--note-h);              /* Exact 26.735mm */
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center;
 }
 .note p {
   height: 17.14mm;                      /* 4 lines x 4.285mm: the 9pt English text needs 4 lines */
@@ -795,7 +825,3 @@ body {
   transform: translate(-50%, calc(-100% - 7px));
 }
 
-.ui-tooltip.is-visible {
-  opacity: 1;
-  transform: translate(-50%, -10px);     /* Frame se saaf upar float karega */
-}
