@@ -117,8 +117,10 @@
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => toastEl.classList.remove('is-visible'), 3200);
   }
+  
 
   /* ---------- dialogs (native <dialog>: focus trap + Esc for free) ---------- */
+  document.addEventListener('cert:toast', (e) => { if (e.detail) toast(String(e.detail)); });
   function confirmDialog(title, message, okLabel) {
     return new Promise((resolve) => {
       const dlg = mk('dialog', 'mt-modal no-print');

@@ -203,10 +203,12 @@ async function networkFirst(event) {
   const cache = await caches.open(CACHE_NAME);
   const cached = await cache.match(request, { ignoreSearch: true });
 
+ 
+  const net = new Request(request, { cache: 'no-cache' });
   try {
     const res = cached
-      ? await fetchWithTimeout(request, NETWORK_TIMEOUT_MS)
-      : await fetch(request);
+      ? await fetchWithTimeout(net, NETWORK_TIMEOUT_MS)
+      : await fetch(net);
     if (cacheable(res)) event.waitUntil(cache.put(request, res.clone()));
     return res;
   } catch (_) {

@@ -116,11 +116,15 @@
       const tx = db.transaction(DB_STORE, mode);
       const req = fn(tx.objectStore(DB_STORE));
       tx.oncomplete = () => { db.close(); resolve(req ? req.result : undefined); };
-      tx.onerror = () => { db.close(); reject(tx.error); };
+      tx.onerror = () => { db.close(); reject(tx.error || new Error('IndexedDB error')); };
+      tx.onabort = () => { db.close(); reject(tx.error || new Error('IndexedDB aborted')); };   // quota-exceeded yahin aata hai
     }));
   }
 
-  const imgPut = (key, val) => dbOp('readwrite', (s) => s.put(val, key)).catch(() => {});
+  function notify(msg) { document.dispatchEvent(new CustomEvent('cert:toast', { detail: msg })); }
+
+  const imgPut = (key, val) => dbOp('readwrite', (s) => s.put(val, key))
+    .catch(() => { notify('Image could not be saved in this browser (storage full or blocked). It will be lost on reload.'); });
   const imgGet = (key) => dbOp('readonly', (s) => s.get(key)).catch(() => undefined);
   const imgDel = (key) => dbOp('readwrite', (s) => s.delete(key)).catch(() => {});
 
@@ -561,6 +565,12 @@
     const t = isEditable(e.target);
     if (!t) return;
 
+       
+    if (e.inputType.indexOf('format') === 0 || e.inputType === 'insertFromDrop') {
+      e.preventDefault();
+      return;
+    }
+
     // data-nospace (passport): space block
     if (t.hasAttribute('data-nospace') && typeof e.data === 'string' && /\s/.test(e.data)) {
       e.preventDefault();
@@ -584,8 +594,7 @@
   });
 
   document.addEventListener('drop', (e) => {
-    const t = isEditable(e.target);
-    if (t && t.hasAttribute('data-filter')) e.preventDefault();
+    if (isEditable(e.target)) e.preventDefault();
   });
 
   // Single-line fields mein Enter new line/div bana deta hai aur layout tod deta hai: block karo.
@@ -593,6 +602,11 @@
     const t = isEditable(e.target);
     if (!t) return;
     if (t.hasAttribute('data-nospace') && (e.key === ' ' || e.key === 'Spacebar')) { e.preventDefault(); return; }
+
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.code === 'KeyB' || e.code === 'KeyI' || e.code === 'KeyU')) {
+      e.preventDefault();
+      return;
+    }
 
     // English disclaimer: 3 lines (2 Enter) ke baad chothi line banana block karo
     if (e.key === 'Enter' && t.classList.contains('en') && t.closest('.note')) {

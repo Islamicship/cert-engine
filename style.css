@@ -405,6 +405,7 @@ body {
   height: var(--tier-h);
   direction: ltr;
   background: transparent;
+  flex: none;
   overflow: hidden;
   position: relative;
 }
