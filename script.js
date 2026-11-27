@@ -1367,7 +1367,7 @@
     window.addEventListener('beforeprint', () => {
       // blur pehle: focusout rules (padding/default restore) aur nationality commit chal jaate hain
       if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
-      setAutoDates();
+      renderDates();
       updateDob(true);
       syncNationality('en');
       fitAll();

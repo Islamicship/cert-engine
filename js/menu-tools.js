@@ -1379,7 +1379,7 @@
 
   /* ---------- batch dialog ---------- */
   const TEMPLATE_CSV =
-    '\uFEFFname_en,name_ar,name_ar,id,passport,dob,nationality,nationality_ar,seq\r\n' +
+    '\uFEFFname_en,name_ar,id,passport,dob,nationality,nationality_ar,seq\r\n' +
     'MOHAMMED ALI,محمد علي,212345678,AB1234567,24/01/1990,Pakistan,,000001\r\n';
 
   function openBatchDialog() {

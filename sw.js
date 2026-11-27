@@ -34,7 +34,7 @@
  *   logo), or when you add/remove files from the lists below.
  */
 
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const CACHE_PREFIX = 'cert-engine-';
 const CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
 
