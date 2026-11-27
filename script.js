@@ -1270,6 +1270,42 @@
       requestAnimationFrame(() => selectAllContent(nextEl));
     });
   }
+
+  /* ----------------------------------------------------------
+   * 5b. Random 6-digit Certificate Sequence Generator
+   * ---------------------------------------------------------- */
+  function generateCertSequence() {
+    const array = new Uint32Array(1);
+    (window.crypto || window.msCrypto).getRandomValues(array);
+    const randomSeq = String(100000 + (array[0] % 900000));
+
+    const nodes = document.querySelectorAll('[data-sync="cert-seq"]');
+    if (!nodes.length) return;
+
+    nodes.forEach((el) => {
+      el.textContent = randomSeq;
+    });
+
+    // propagate(), refit() aur scheduleSave() trigger karne ke liye
+    nodes[0].dispatchEvent(new Event('input', { bubbles: true }));
+
+    // Click micro-animation
+    document.querySelectorAll('.cert-gen-btn').forEach((btn) => {
+      btn.classList.remove('is-spinning');
+      void btn.offsetWidth;
+      btn.classList.add('is-spinning');
+    });
+  }
+
+  function initCertGenerator() {
+    document.querySelectorAll('.cert-gen-btn').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        generateCertSequence();
+      });
+    });
+  }
   
   /* ----------------------------------------------------------
    * 6. Init + print helper
@@ -1296,7 +1332,8 @@
     initLockToggle();
     initNationality();
     initSmartTooltips();
-    initExcelTabNavigation(); // <-- Yeh line add karein
+    initExcelTabNavigation();
+    initCertGenerator();
     
 
     document.querySelectorAll('[data-exact]').forEach((el) => checkExact(el, true));
@@ -1366,6 +1403,7 @@
 
       fitAll: fitAll,
       save: saveNow,
+      generateCertSeq: generateCertSequence,
       clearPhoto: function () {
         const box = $('photo-box');
         if (!box || isLocked(box) || box.classList.contains('is-empty')) return false;
