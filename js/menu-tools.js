@@ -1139,7 +1139,11 @@
     { label: 'Date of Birth',
       nodes: () => qa('#dob-en, #dob-ar'),
       target: () => $('dob-en'),
-      ok: () => { const a = $('dob-ar'); return !!a && a.textContent.trim() !== ''; } }   // Hijri tabhi bharta hai jab DOB valid ho
+      ok: () => { const a = $('dob-ar'); return !!a && a.textContent.trim() !== ''; } },   // Hijri tabhi bharta hai jab DOB valid ho
+    { label: 'Nationality (EN + AR)',
+      nodes: () => qa('#nat-en-combo, #nat-ar-combo'),
+      target: () => $('nat-ar'),
+      ok: () => { const e = $('nat-en'), a = $('nat-ar'); return !!e && !!a && e.value.trim() !== '' && a.value.trim() !== ''; } }
   ];
 
   const missingRequired = () => REQUIRED.filter((r) => !r.ok());

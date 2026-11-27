@@ -19,7 +19,7 @@
   --danger:  #d93025;
   --text-gray:  #727376;   /* company name (EN) + disclaimer (EN) */
   --text-green: #0D9A70;   /* company name (AR) + disclaimer (AR) */
-  --text-field: #373435;
+  --text-field: #231F20;
 
   /* Badge font: DIN Next LT Arabic Bold (licensed font: must be installed or self-hosted, see @font-face) */
   --font-din-en: 'DIN Next LT Arabic', 'DIN Alternate', 'Bahnschrift', 'Inter', sans-serif;

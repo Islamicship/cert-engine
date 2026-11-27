@@ -34,7 +34,7 @@
  *   logo), or when you add/remove files from the lists below.
  */
 
-const CACHE_VERSION = 'v5';
+const CACHE_VERSION = 'v7';
 const CACHE_PREFIX = 'cert-engine-';
 const CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
 
@@ -189,6 +189,10 @@ async function cacheFirst(event) {
     if (cacheable(res)) event.waitUntil(cache.put(event.request, res.clone()));
     return res;
   } catch (_) {
+    if (event.request.mode === 'navigate') {
+      const shell = await cache.match(SHELL_URL);
+      if (shell) return shell;
+    }
     return Response.error();
   }
 }
