@@ -40,10 +40,12 @@
     <link rel="stylesheet" href="css/theme.css" />
     <link rel="stylesheet" href="css/viewport.css" />
     <link rel="stylesheet" href="css/menu-tools.css" />
+    <link rel="stylesheet" href="css/photo-editor.css" />
 
     <!-- Order matters: viewport.js must run before script.js so window.__certScale exists. -->
     <script src="js/theme.js" defer></script>
     <script src="js/viewport.js" defer></script>
+    <script src="js/photo-editor.js" defer></script>
     <script src="script.js" defer></script>
     <script src="js/menu-tools.js" defer></script>
     <script src="js/export-tools.js" defer></script>
@@ -144,49 +146,19 @@
           <span class="hint">Click to<br />upload photo</span>
         </div>
 
-        <!-- Hidden File Input (ID 'photo-file-input' assign kiya taake JS target kare) -->
-        <input
-          id="photo-file-input"
-          type="file"
-          accept="image/*"
-          tabindex="-1"
-          aria-hidden="true"
-        />
-
-        <!-- FLOATING CONTROLS (Hover par show hoga, Print me gayab) -->
-        <div class="photo-toolbar" id="photo-toolbar">
-          <button type="button" id="btnRotateCCW" title="Rotate Left 90°">⟲</button>
-          <button type="button" id="btnRotateCW" title="Rotate Right 90°">⟳</button>
-          <button type="button" id="btnZoomIn" title="Zoom In (+)">+</button>
-          <button type="button" id="btnZoomOut" title="Zoom Out (−)">−</button>
-          <button type="button" id="btnResetPhoto" title="Reset Position">↺</button>
-          <button type="button" id="btnChangePhoto" title="Change Photo">📁</button>
+        <!-- Hidden File Input -->
+        <input id="photo-file-input" type="file" accept="image/*" tabindex="-1" aria-hidden="true" />
         </div>
-      </div>
-
-      <!-- 2. TITLE (BILKUL UNTOUCHED - NO CHANGE) -->
-      <div class="title">
-        <div
-          class="ar fit"
-          lang="ar"
-          dir="rtl"
-          data-unlockable
-          data-filter="arabic"
-          data-max="40"
-          data-collapse
-        >
-          شهادة
+        
+        <!-- 2. TITLE (BILKUL UNTOUCHED - NO CHANGE) -->
+        <div class="title">
+          <div class="ar fit" lang="ar" dir="rtl" data-unlockable data-filter="arabic" data-max="40" data-collapse>
+            شهادة
+          </div>
+          <div class="en fit" data-unlockable data-filter="english-text" data-max="40" data-collapse>
+            CERTIFICATION
+          </div>
         </div>
-        <div
-          class="en fit"
-          data-unlockable
-          data-filter="english-text"
-          data-max="40"
-          data-collapse
-        >
-          CERTIFICATION
-        </div>
-      </div>
 
       <!-- 3. LOGO (BILKUL UNTOUCHED - NO CHANGE) -->
       <div

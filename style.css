@@ -828,87 +828,32 @@ body {
 
 
 /* ============================================================
-   PHOTO GEOMETRY & INTERACTIVE CROP (EXACT CORELDRAW SPEC)
+   PHOTO GEOMETRY (Corel spec). The picture is BAKED by js/photo-editor.js
+   to exactly the frame ratio (4:5), so object-fit: contain (set above) fills it.
+   No transform lives on the image any more.
    ============================================================ */
-
-/* Inner Frame Cut: strictly locked to 29.60mm x 37.00mm */
 #photo-box .frame {
   position: relative;
   width: 29.60mm;
   height: 37.00mm;
-  overflow: hidden; /* Bahar nikli photo ko cut karega */
-  cursor: grab;
+  overflow: hidden;
+  cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
 }
 
-#photo-box .frame.is-dragging {
-  cursor: grabbing;
-}
-
-/* Candidate Photo Element */
 #photo-img.photo-img {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  max-width: none;
+  inset: 0;
   display: none;
   pointer-events: none;
-  transform-origin: center center;
-  will-change: transform;
-}
-#photo-box:not(.is-empty) #photo-img.photo-img { display: block; }
-
-/* Floating Controls Toolbar */
-#photo-toolbar.photo-toolbar {
-  position: absolute;
-  bottom: -32px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 3px;
-  background: rgba(18, 22, 26, 0.92);
-  padding: 3px 6px;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-  z-index: 10;
 }
 
-/* Hover par toolbar show ho */
-#photo-box:hover #photo-toolbar.has-photo {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateX(-50%) translateY(-2px);
+#photo-box:not(.is-empty) #photo-img.photo-img {
+  display: block;
 }
 
-#photo-toolbar button {
-  background: #2b323b;
-  border: none;
-  color: #ffffff;
-  width: 22px;
-  height: 22px;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 11px;
-  font-weight: bold;
-  transition: background 0.15s ease;
-}
-
-#photo-toolbar button:hover {
-  background: #10b981; /* Green accent */
-}
-
-/* Print Overrides: Print par controls bilkul gayab */
 @media print {
-  #photo-toolbar {
-    display: none !important;
-  }
   #photo-box .frame {
     cursor: default !important;
   }

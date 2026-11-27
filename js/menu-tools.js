@@ -480,7 +480,7 @@
     if (box.classList.contains('is-locked')) return 'locked';
     const blob = await (await fetch(dataUrl)).blob();
     if (blob.size > MAX_IMAGE_BYTES) return 'too-big';
-    box._loadFile(new File([blob], boxId + '.img', { type: blob.type }));
+    box._loadFile(new File([blob], boxId + '.img', { type: blob.type }), { raw: true });   // backup photos are already baked: no editor
     return 'ok';
   }
 
@@ -1530,7 +1530,7 @@
   function openQuickStart() {
     const items = [
       'Fill the record: Name (English and Arabic), ID No. (9 digits after the fixed 2), Passport, Date of Birth as DD/MM/YYYY (the Hijri date is computed for you) and Nationality (either dropdown fills the other).',
-      'Photo: click the photo box, right-click it for Upload / Remove / Lock, or paste an image with Ctrl+V. The outer frame is 35.814 × 41.481 mm; the picture is fitted at 37.042 mm height and is never stretched.',
+      'Photo: click the box to upload. Clicking a photo that is already there opens the editor (crop, zoom, rotate, flip, replace). You can also paste an image with Ctrl+V. The result is saved at exactly the certificate frame ratio (4:5) and never stretched.',
       'Excel-style editing: Tab and Shift+Tab jump between cells and select their whole text; Enter finishes a single-line cell.',
       'Layout texts (titles, badges, Requested By, disclaimer, ribbon) are locked. Use the lock badge at the top right to unlock them, and lock them again when done.',
       'Dates: issue date is today, expiry is 29 days later. F5 recalculates them.',
@@ -1607,7 +1607,7 @@
       ['Offline cache', info.names.length ? info.names.join(', ') : 'None'],
       ['Paper', 'A4 portrait, 210 × 297 mm, @page margin 0'],
       ['Data grid', 'Row 196.85 mm · tier 7.923 mm · gap 1.898 mm'],
-      ['Photo frame', '35.814 × 41.481 mm (image height 37.042 mm)'],
+      ['Photo frame', '35.82 × 41.48 mm outer, 29.60 × 37.00 mm inner (photo baked 700 × 875 px)'],
       ['Data location', 'Stays in this browser (localStorage + IndexedDB); nothing is uploaded']
     ];
     infoDialog('About CertEngine', [statusList(rows)]);

@@ -18,6 +18,7 @@
   'use strict';
 
   const MAX_IMAGE_BYTES = 5 * 1024 * 1024;   // 5 MB cap
+  const MAX_PHOTO_SOURCE_BYTES = 20 * 1024 * 1024;   // photo box: editor decodes + downscales, so phone shots are fine
   const MIN_FONT_PX = 6;                      // auto-fit lower limit
   // .combo containers are skipped on purpose: their <input> is fitted directly.
   // .badge included: 14pt DIN badges shrink automatically if a label is wider than its cell.
@@ -138,126 +139,7 @@
     box.classList.toggle('is-locked', !!locked);
     box.setAttribute('aria-disabled', locked ? 'true' : 'false');
   }
-          /* ============================================================
-            PHOTO CONTROLLER (pan / zoom / rotate only)
-            File loading yahan NAHI hai: sirf initUploadBox.loadFile -> setImage().
-            ============================================================ */
-    (function initPhotoController() {
-      const photoBox = document.getElementById("photo-box");
-      const photoInput = document.getElementById("photo-file-input");
-      const photoFrame = document.getElementById("photo-frame");
-      const photoImg = document.getElementById("photo-img");
-      const toolbar = document.getElementById("photo-toolbar");
 
-      if (!photoBox || !photoInput || !photoFrame || !photoImg || !toolbar) return;
-
-      const btnRotateCW = document.getElementById("btnRotateCW");
-      const btnRotateCCW = document.getElementById("btnRotateCCW");
-      const btnZoomIn = document.getElementById("btnZoomIn");
-      const btnZoomOut = document.getElementById("btnZoomOut");
-      const btnReset = document.getElementById("btnResetPhoto");
-      const btnChange = document.getElementById("btnChangePhoto");
-
-      const state = { scale: 1.0, x: 0, y: 0, rotation: 0 };
-      const PAN_SPEED = 0.6;
-      let drag = null;          // { cx, cy, x0, y0, moved } : cx/cy SCREEN px, x0/y0 pan-state at pointer-down
-      let dragMoved = false;    // pan ke baad aane wala click swallow karne ke liye
-
-      const hasPhoto = () => !photoBox.classList.contains("is-empty");
-
-      function updateTransform() {
-        photoImg.style.transform = `translate(calc(-50% + ${state.x}px), calc(-50% + ${state.y}px)) scale(${state.scale}) rotate(${state.rotation}deg)`;
-      }
-
-      function resetState() {
-        state.scale = 1.0;
-        state.x = 0;
-        state.y = 0;
-        state.rotation = 0;
-        updateTransform();
-      }
-
-      // setImage() / clearImage() ye hooks use karte hain
-      photoBox._afterSet = () => { resetState(); toolbar.classList.add("has-photo"); };
-      photoBox._resetPhoto = () => {
-        photoImg.removeAttribute("src");
-        resetState();
-        toolbar.classList.remove("has-photo");
-      };
-
-      // Toolbar buttons ke click se parent box ka file-picker na khulay
-      toolbar.addEventListener("click", (e) => e.stopPropagation());
-      toolbar.addEventListener("mousedown", (e) => e.stopPropagation());
-
-      // Pan ke baad mouse-up par click frame se box tak bubble hota hai aur picker khol deta hai: yahin rok do
-      photoBox.addEventListener("click", (e) => {
-        if (dragMoved) { e.stopImmediatePropagation(); e.preventDefault(); }
-      }, true);
-
-      const point = (e) => {
-        const t = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]) || e;
-        return { x: t.clientX, y: t.clientY };
-      };
-
-      function onPointerDown(e) {
-        if (e.type === "mousedown" && e.button !== 0) return;
-        if (!hasPhoto() || isLocked(photoBox)) return;
-        const p = point(e);
-        drag = { cx: p.x, cy: p.y, x0: state.x, y0: state.y, moved: false };
-        photoFrame.classList.add("is-dragging");
-        e.preventDefault();
-        e.stopPropagation();
-      }
-
-      function onPointerMove(e) {
-        if (!drag) return;
-        const p = point(e);
-        const dx = p.x - drag.cx, dy = p.y - drag.cy;             // screen px, POINTER-DOWN se naapa
-        if (!drag.moved && Math.hypot(dx, dy) > 3) drag.moved = true;
-        if (!drag.moved) return;                                   // click jitter photo ko nahi hilata
-        const k = PAN_SPEED / certScale();                         // scale compensation + speed factor
-        state.x = drag.x0 + dx * k;
-        state.y = drag.y0 + dy * k;
-        updateTransform();
-      }
-
-      function onPointerUp() {
-        if (!drag) return;
-        if (drag.moved) {
-          dragMoved = true;
-          setTimeout(() => { dragMoved = false; }, 0);
-        }
-        drag = null;
-        photoFrame.classList.remove("is-dragging");
-      }
-
-      photoFrame.addEventListener("mousedown", onPointerDown);
-      window.addEventListener("mousemove", onPointerMove);
-      window.addEventListener("mouseup", onPointerUp);
-
-      photoFrame.addEventListener("touchstart", onPointerDown, { passive: false });
-      window.addEventListener("touchmove", onPointerMove, { passive: false });
-      window.addEventListener("touchend", onPointerUp);
-      window.addEventListener("touchcancel", onPointerUp);
-
-      photoFrame.addEventListener("wheel", (e) => {
-        if (!hasPhoto()) return;
-        e.preventDefault();
-        e.stopPropagation();
-        const zoomStep = 0.08;
-        state.scale = e.deltaY < 0
-          ? Math.min(state.scale + zoomStep, 3.5)
-          : Math.max(state.scale - zoomStep, 0.7);
-        updateTransform();
-      }, { passive: false });
-
-      btnZoomIn.addEventListener("click", () => { state.scale = Math.min(state.scale + 0.15, 3.5); updateTransform(); });
-      btnZoomOut.addEventListener("click", () => { state.scale = Math.max(state.scale - 0.15, 0.7); updateTransform(); });
-      btnRotateCW.addEventListener("click", () => { state.rotation = (state.rotation + 90) % 360; updateTransform(); });
-      btnRotateCCW.addEventListener("click", () => { state.rotation = (state.rotation - 90 + 360) % 360; updateTransform(); });
-      btnReset.addEventListener("click", resetState);
-      btnChange.addEventListener("click", () => { if (!isLocked(photoBox)) photoInput.click(); });
-    })();
 
   function setImage(box, frame, dataUrl, persist) {
     let img = frame.querySelector('img');
@@ -268,37 +150,57 @@
     }
     img.src = dataUrl;
     box.classList.remove('is-empty');
-    if (typeof box._afterSet === 'function') box._afterSet();
     if (persist !== false) imgPut(box.id, dataUrl);
   }
 
-    function clearImage(box) {
-    if (typeof box._resetPhoto === 'function') {
-      box._resetPhoto();
-    } else {
-      const img = box.querySelector('.frame img');
-      if (img) img.remove();
+  function clearImage(box) {
+    const img = box.querySelector('.frame img');
+    if (img) {
+      if (box.id === 'photo-box') img.removeAttribute('src');   // #photo-img is permanent markup: keep the node
+      else img.remove();
     }
     box.classList.add('is-empty');
     imgDel(box.id);
+  }
+
+  // Opens the editor; the BAKED result is what gets stored (IndexedDB) and shown.
+  // source: { file } for a new photo, omitted = edit the photo that is on the sheet.
+  function editPhoto(box, source) {
+    const ed = window.CertPhotoEditor;
+    const frame = box.querySelector('.frame');
+    const img = $('photo-img');
+    if (!ed || !frame) return Promise.resolve(false);
+    const src = source || { src: img && img.getAttribute('src') };
+    if (!src.file && !src.src) return Promise.resolve(false);
+    return ed.open(src).then((url) => {
+      if (!url) return false;
+      setImage(box, frame, url, true);
+      return true;
+    });
   }
 
   function initUploadBox(box) {
     const input = box.querySelector('input[type="file"]');
     const frame = box.querySelector('.frame');
     if (!input || !frame) return;
+    const isPhoto = box.id === 'photo-box';
 
-    const openPicker = () => { if (!isLocked(box)) input.click(); };
+    // Photo with a picture -> editor (mobile has no hover / right-click). Empty photo and logo -> file picker.
+    const activate = () => {
+      if (isLocked(box)) return;
+      if (isPhoto && !box.classList.contains('is-empty') && window.CertPhotoEditor) editPhoto(box);
+      else input.click();
+    };
 
     box.addEventListener('click', (e) => {
-      if (e.target !== input) openPicker();   // input.click() bubble hota hai: loop se bachao
+      if (e.target !== input) activate();   // input.click() bubbles: avoid the loop
     });
 
     box.addEventListener('keydown', (e) => {
       if (isLocked(box)) return;
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        openPicker();
+        activate();
       } else if ((e.key === 'Delete' || e.key === 'Backspace') && !box.classList.contains('is-empty')) {
         e.preventDefault();
         clearImage(box);
@@ -310,22 +212,26 @@
       showCtx(box, e.clientX, e.clientY);
     });
 
-    function loadFile(file) {
+    // opts.raw = already-baked image (backup restore): skip the editor.
+    function loadFile(file, opts) {
       if (!file || isLocked(box)) return;
 
       if (!file.type || !file.type.startsWith('image/')) {
-     notify('Please choose an image file (JPG, PNG, WEBP or SVG).');
-     return;
-   }
-      if (file.size > MAX_IMAGE_BYTES) {
-     notify('Image must be smaller than 5 MB.');
-     return;
-   }
+        notify('Please choose an image file (JPG, PNG, WEBP or SVG).');
+        return;
+      }
+      const viaEditor = isPhoto && !(opts && opts.raw) && !!window.CertPhotoEditor;
+      const cap = viaEditor ? MAX_PHOTO_SOURCE_BYTES : MAX_IMAGE_BYTES;
+      if (file.size > cap) {
+        notify('Image must be smaller than ' + (cap / 1048576) + ' MB.');
+        return;
+      }
+      if (viaEditor) { editPhoto(box, { file: file }); return; }
 
       const reader = new FileReader();
-   reader.onload = () => setImage(box, frame, String(reader.result), true);
-   reader.onerror = () => notify('The image could not be read. Try another file.');
-   reader.readAsDataURL(file);
+      reader.onload = () => setImage(box, frame, String(reader.result), true);
+      reader.onerror = () => notify('The image could not be read. Try another file.');
+      reader.readAsDataURL(file);
     }
     box._loadFile = loadFile;
 
@@ -334,7 +240,7 @@
       input.value = '';
     });
 
-    // Saved image wapas lao
+    // Saved image wapas lao (already baked: editor bypass)
     imgGet(box.id).then((url) => { if (typeof url === 'string' && url) setImage(box, frame, url, false); });
   }
 
@@ -361,6 +267,7 @@
 
     ctx.textContent = '';
     ctxItem((empty ? 'Upload ' : 'Replace ') + label + '\u2026', locked, () => box.querySelector('input[type="file"]').click());
+    if (box.id === 'photo-box' && window.CertPhotoEditor) ctxItem('Edit photo\u2026', locked || empty, () => editPhoto(box));
     ctxItem('Remove ' + label, locked || empty, () => { clearImage(box); });
     ctx.appendChild(document.createElement('hr'));
     ctxItem((locked ? 'Unlock ' : 'Lock ') + label, false, () => { setLocked(box, !locked); scheduleSave(); });
@@ -1215,7 +1122,7 @@
     let hoverTimer = null;
 
     function getHint(el) {
-      if (el.closest('#photo-box')) return 'Click to upload photo';
+      if (el.closest('#photo-box')) return el.closest('#photo-box').classList.contains('is-empty') ? 'Click to upload photo' : 'Click to edit photo';
       if (el.closest('#logo-box')) return 'Click to upload logo';
       if (el.closest('.name-en')) return 'Full Name (English)';
       if (el.closest('.name-ar')) return 'الاسم بالعربية';
