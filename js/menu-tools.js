@@ -104,7 +104,7 @@
   /* ---------- toast ---------- */
   let toastEl = null;
   let toastTimer = 0;
-  function toast(msg) {
+  function toast(msg, ms) {
     if (!toastEl) {
       toastEl = mk('div', 'mt-toast no-print');
       toastEl.setAttribute('role', 'status');
@@ -115,7 +115,7 @@
     void toastEl.offsetWidth;
     toastEl.classList.add('is-visible');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toastEl.classList.remove('is-visible'), 3200);
+    toastTimer = setTimeout(() => toastEl.classList.remove('is-visible'), ms || 3200);
   }
   
 
@@ -451,6 +451,7 @@
     if (!ok) return;
     guarded(() => applyRecord(DEFAULTS));
     if (window.CertApp && typeof window.CertApp.clearPhoto === 'function') window.CertApp.clearPhoto();
+    if (window.CertApp && typeof window.CertApp.pinToday === 'function') window.CertApp.pinToday();
     toast('Blank record ready');
   }
 
@@ -465,7 +466,8 @@
       count: nodes.length,
       fields: snap(),
       photo: await idbGet('photo-box'),
-      logo: await idbGet('logo-box')          // null while the default assets/logo.png is in use
+      logo: await idbGet('logo-box'),         // null while the default assets/logo.png is in use
+      issued: window.CertApp && window.CertApp.getIssued ? window.CertApp.getIssued() : null
     };
     download('cert-backup-' + localStamp() + '.json', JSON.stringify(payload), 'application/json');
     toast('Backup downloaded');
@@ -508,6 +510,9 @@
     }
 
     guarded(() => applySnapshot(data.fields));
+    if (typeof data.issued === 'string' && window.CertApp && typeof window.CertApp.setIssued === 'function') {
+      window.CertApp.setIssued(data.issued);
+    }
 
     const notes = [];
     for (const [key, id] of [['photo', 'photo-box'], ['logo', 'logo-box']]) {
@@ -527,6 +532,12 @@
     const X = window.CertExport;
     if (!X) { toast('Export module is not loaded (js/export-tools.js)'); return; }
     if (exporting) { toast('An export is already running…'); return; }
+    const miss = revealMissing();                       // HARD gate: required fields incomplete = export nahi
+    if (miss.length) {
+      toast('Cannot save ' + kind.toUpperCase() + ': ' + miss.length + ' required field' + (miss.length === 1 ? '' : 's') +
+        ' missing (' + miss.map((r) => r.label).join(', ') + ')', 7000);
+      return;
+    }
     if (!(await printGuard('Save as ' + kind.toUpperCase()))) return;
     exporting = true;
     flush();
@@ -570,6 +581,10 @@
     const note = qa('.note p').map((n) => n.textContent).join(' ');
     if (/Company Name/i.test(note) || note.indexOf('\u0627\u0633\u0645 \u0627\u0644\u0634\u0631\u0643\u0629') >= 0) {
       found.push('Disclaimer company name');
+    }
+
+        if (window.CertApp && typeof window.CertApp.issueIsStale === 'function' && window.CertApp.issueIsStale()) {
+      found.push('Issue date is not today (' + g('[data-auto="issue-en"]') + '): press F5 to set today');
     }
 
     // DOB 01/01/2000 asli records mein bhi hota hai: sirf yaad dilao, alag se mention
@@ -649,7 +664,7 @@
       'Wipe and reload'
     );
     if (!ok) return;
-    const wipe = () => { try { localStorage.removeItem(FORM_KEY); } catch (_) { /* ignore */ } };
+    const wipe = () => { try { localStorage.removeItem(FORM_KEY); localStorage.removeItem('cert-issued'); } catch (_) { /* ignore */ } };
     await Promise.all([idbDel('photo-box'), idbDel('logo-box')]);
     wipe();
     // script.js saves on pagehide / visibilitychange. Our listeners are registered AFTER its own,
@@ -737,18 +752,32 @@
     sel.addRange(range);
   }
 
-  function clipTarget() {
-    if (!restoreEd()) return null;
-    return lastEd.el;
+    // Edit menu state (CorelDraw / Illustrator): Cut/Copy ko selection chahiye, Paste ko target cell.
+  // Nationality <input> sirf tab jab woh focused ho (mouse se menu kholne par focus wahin rehta hai).
+  function selState() {
+    const a = document.activeElement;
+    if (a && a.matches && a.matches('.combo-input')) {
+      return { target: true, has: a.selectionStart !== a.selectionEnd };
+    }
+    const r = lastEd;
+    if (r && r.el.isConnected) return { target: true, has: !!(r.range && !r.range.collapsed) };
+    return { target: false, has: false };
+  }
+
+  function clipEl() {
+    const a = document.activeElement;
+    if (a && a.matches && a.matches('.combo-input')) return a;
+    return restoreEd() ? lastEd.el : null;
   }
 
   async function clipCopy(cut) {
-    const el = clipTarget();
+    const el = clipEl();
     if (!el) { toast('Click inside a text cell first'); return; }
-    let sel = window.getSelection();
-    if (!sel || sel.isCollapsed) selectContents(el);       // nothing selected: act on the whole cell
-    sel = window.getSelection();
-    const text = String(sel);
+    const isInput = el.tagName === 'INPUT';
+    const sel = window.getSelection();
+    const has = isInput ? el.selectionStart !== el.selectionEnd : !!sel && !sel.isCollapsed;
+    if (!has) { toast('Select some text first'); return; }      // poora cell ab kabhi khud select nahi hota
+    const text = isInput ? el.value.slice(el.selectionStart, el.selectionEnd) : String(sel);
     let ok = false;
     try { ok = document.execCommand(cut ? 'cut' : 'copy'); } catch (_) { ok = false; }
     if (!ok) {
@@ -759,20 +788,17 @@
   }
 
   async function clipPaste() {
-    if (!clipTarget()) { toast('Click inside a text cell first'); return; }
+    if (!clipEl()) { toast('Click inside a text cell first'); return; }
     let text = '';
     try { text = await navigator.clipboard.readText(); }
     catch (_) { toast('The browser blocked clipboard reading — press Ctrl+V in the cell instead'); return; }
-    const el = clipTarget();                                // focus may have drifted while the browser asked permission
+    const el = clipEl();                                  // permission prompt ke dauran focus drift ho sakta hai
     if (!el || !text) return;
-    // same plain-text rules as script.js's own paste handler
-    if (!el.hasAttribute('data-multiline')) text = text.replace(/\s*[\r\n]+\s*/g, ' ');
+    text = text.replace(/\s*[\r\n]+\s*/g, el.hasAttribute('data-multiline') ? '\n' : ' ');
     if (el.hasAttribute('data-nospace')) text = text.replace(/\s+/g, '');
     if (!text) return;
-    // insertText goes through script.js's beforeinput filter (allowed characters, max length, CAPS)
-    document.execCommand('insertText', false, text);
+    document.execCommand('insertText', false, text);      // script.js beforeinput filters + <input> maxlength dono lagte hain
   }
-
   /* ---------- Select All > All Form Fields ---------- */
   function selectAllFields() {
     const cells = qa('[contenteditable="true"], .combo-input');
@@ -1042,6 +1068,7 @@
   }
 
   function scheduleAudit() {
+    scheduleReady();                                      // required-fields chip bhi isi trigger se update hota hai
     if (!auditOn || auditTimer) return;
     auditTimer = setTimeout(runAudit, 80);
   }
@@ -1065,12 +1092,100 @@
     }).observe(box, { attributes: true, attributeFilter: ['class'] });
   }
 
+    /* ======================================================================
+   * 6b. Required fields: HARD gate for Save PDF / JPG (Print sirf confirm guard: native print rok nahi sakte)
+   *     Field bharte hi red ring khud hat jati hai (refreshReady). Photo ya passport zaroori na ho
+   *     to uski entry REQUIRED se hata do.
+   * ====================================================================== */
+  const cellText = (sel) => { const n = q1(sel); return n ? n.textContent.trim() : ''; };
+  const ready = { chip: null, label: null };
+  let readyTimer = 0;
+
+  const REQUIRED = [
+    { label: 'Photo',
+      nodes: () => [$('photo-box')],
+      target: () => $('photo-box'),
+      ok: () => { const b = $('photo-box'); return !!b && !b.classList.contains('is-empty'); } },
+    { label: 'Certification sequence',
+      nodes: () => qa('[data-sync="cert-seq"]'),
+      target: () => q1('[data-sync="cert-seq"]'),
+      ok: () => { const t = cellText('[data-sync="cert-seq"]'); return /^\d{1,6}$/.test(t) && parseInt(t, 10) > 0; } },
+    { label: 'Name (EN)',
+      nodes: () => qa('.name-en'),
+      target: () => q1('.name-en'),
+      ok: () => { const t = cellText('.name-en'); return !!t && t !== DEFAULTS.nameEn; } },
+    { label: 'Name (AR)',
+      nodes: () => qa('.name-ar'),
+      target: () => q1('.name-ar'),
+      ok: () => { const t = cellText('.name-ar'); return !!t && t !== DEFAULTS.nameAr; } },
+    { label: 'ID No. (9 digits)',
+      nodes: () => qa('.idno'),
+      target: () => q1('[data-sync="id"]'),
+      ok: () => { const t = cellText('[data-sync="id"]'); return /^\d{9}$/.test(t) && !/^0+$/.test(t); } },
+    { label: 'Passport number',
+      nodes: () => qa('.passport'),
+      target: () => q1('[data-sync="passport"]'),
+      ok: () => { const t = cellText('[data-sync="passport"]'); return !!t && t !== DEFAULTS.passport; } },
+    { label: 'Date of Birth',
+      nodes: () => qa('#dob-en, #dob-ar'),
+      target: () => $('dob-en'),
+      ok: () => { const a = $('dob-ar'); return !!a && a.textContent.trim() !== ''; } }   // Hijri tabhi bharta hai jab DOB valid ho
+  ];
+
+  const missingRequired = () => REQUIRED.filter((r) => !r.ok());
+
+  function whyBlocked() {
+    const m = missingRequired();
+    return m.length ? 'Disabled. Missing: ' + m.map((r) => r.label).join(', ') : '';
+  }
+
+  // Missing fields ko red ring do, pehle par scroll + focus. Missing list wapas karta hai.
+  function revealMissing() {
+    const miss = missingRequired();
+    qa('.mt-missing').forEach((n) => n.classList.remove('mt-missing'));
+    miss.forEach((r) => r.nodes().forEach((n) => { if (n) n.classList.add('mt-missing'); }));
+    const el = miss.length ? miss[0].target() : null;
+    if (el) {
+      try { el.scrollIntoView({ block: 'center', inline: 'nearest' }); } catch (_) { /* ignore */ }
+      try { el.focus({ preventScroll: true }); } catch (_) { /* ignore */ }
+      if (el.isContentEditable) selectContents(el);
+    }
+    refreshReady();
+    return miss;
+  }
+
+  function refreshReady() {
+    readyTimer = 0;
+    const miss = missingRequired();
+    const still = new Set(miss);
+    REQUIRED.forEach((r) => {
+      if (!still.has(r)) r.nodes().forEach((n) => { if (n) n.classList.remove('mt-missing'); });
+    });
+    if (!ready.chip) return;
+    const ok = !miss.length;
+    ready.chip.classList.toggle('is-ok', ok);
+    ready.label.textContent = ok ? 'Ready to export' : miss.length + ' required field' + (miss.length === 1 ? '' : 's') + ' missing';
+    ready.chip.title = ok ? 'All required fields are complete' : 'Missing: ' + miss.map((r) => r.label).join(', ') + ' (click to show)';
+  }
+
+  function scheduleReady() {
+    if (readyTimer) return;
+    readyTimer = setTimeout(refreshReady, 80);
+  }
+
   /* ======================================================================
    * 7. Data tools: recalc dates + batch (CSV / JSON)
    * ====================================================================== */
   function recalcDates() {
-    if (window.CertApp && typeof window.CertApp.refreshDates === 'function') {
-      window.CertApp.refreshDates();          // script.js: issue/expiry/YYMM, DOB Hijri, nationality sync, fit, save
+        const app = window.CertApp;
+    if (app && typeof app.pinToday === 'function') {
+      app.pinToday();                          // F5 = "aaj ki date pin karo" + Hijri / nationality sync
+      scheduleAudit();
+      toast('Issue date set to today');
+      return;
+    }
+    if (app && typeof app.refreshDates === 'function') {
+      app.refreshDates();
       scheduleAudit();
       toast('Dates recalculated');
       return;
@@ -1198,7 +1313,6 @@
   let pager = null;
   // A column missing from the file must BLANK the field, never keep the previous candidate's value
   // (a certificate with someone else's passport number is the worst failure mode of a batch tool).
-  // seq is deliberately absent: without a seq column the operator's own sequence number stays.
   const BATCH_BASE = { nameAr: '', nameEn: '', id: '', passport: '', dob: '', natEn: DEFAULTS.natEn };
   const batchRecord = (i) => {
     if (batch.cache[i]) return batch.cache[i];
@@ -1238,11 +1352,20 @@
   }
 
   function loadBatch(records) {
+    const cur = parseInt((q1('[data-sync="cert-seq"]') || {}).textContent, 10);
+    const start = cur > 0 ? cur : 1;                       // field wali seq se shuru; 000000 ho to 1 se
+    const p6 = (n) => String(n).padStart(6, '0');
+    if (start + records.length - 1 > 999999) {
+      toast('Batch rejected: ' + records.length + ' records from ' + p6(start) + ' would pass 999999', 7000);
+      return;
+    }
+    records.forEach((r, i) => { if (!r.seq) r.seq = p6(start + i); });   // file mein diya hua seq override karta hai
     batch.records = records;
     batch.cache = {};
     batch.index = -1;
+    if (window.CertApp && typeof window.CertApp.pinToday === 'function') window.CertApp.pinToday();
     goTo(0);
-    toast(records.length + ' records loaded — use ◀ / ▶ in the menu bar');
+    toast(records.length + ' records loaded (seq ' + p6(start) + ' to ' + p6(start + records.length - 1) + ') — use ◀ / ▶ in the menu bar');
   }
 
   /* ---------- batch dialog ---------- */
@@ -1482,8 +1605,8 @@
     { id: 'file', host: 'bar', label: 'File', access: 'f', alt: 'فائل', items: [
       { label: 'New Record', icon: 'new', kbd: 'Ctrl+N', tip: 'Reset record fields and photo to defaults', run: newRecord },
       { label: 'Open / Import JSON…', icon: 'open', kbd: 'Ctrl+O', tip: 'Load a backup (.json / .cert)', run: importFile },
-      { label: 'Save as PDF (High Quality)', icon: 'pdf', kbd: 'Ctrl+S', tip: 'A4 PDF, 300 DPI, one click', run: () => exportAs('pdf') },
-      { label: 'Save as JPG (High Quality)', icon: 'image', kbd: 'Ctrl+Shift+S', tip: 'A4 JPG, 2480 x 3508 px (300 DPI)', run: () => exportAs('jpg') },
+      { label: 'Save as PDF (High Quality)', icon: 'pdf', kbd: 'Ctrl+S', tip: 'A4 PDF, 300 DPI, one click', run: () => exportAs('pdf'), disabled: () => missingRequired().length > 0, why: whyBlocked },
+      { label: 'Save as JPG (High Quality)', icon: 'image', kbd: 'Ctrl+Shift+S', tip: 'A4 JPG, 2480 x 3508 px (300 DPI)', run: () => exportAs('jpg'), disabled: () => missingRequired().length > 0, why: whyBlocked },
       { label: 'Save Backup As…', icon: 'save', tip: 'Download field values and photos as JSON', run: exportBackup },
       '-',
       { label: 'Send To', icon: 'send', sub: [
@@ -1499,9 +1622,9 @@
       { label: 'Undo', icon: 'undo', kbd: 'Ctrl+Z', tip: 'Undo last field edit', run: undo, disabled: () => !canUndo() },
       { label: 'Redo', icon: 'redo', kbd: 'Ctrl+Y', tip: 'Redo field edit', run: redo, disabled: () => !canRedo() },
       '-',
-      { label: 'Cut', icon: 'cut', kbd: 'Ctrl+X', tip: 'Cut the selection (or the whole cell when nothing is selected)', run: () => clipCopy(true) },
-      { label: 'Copy', icon: 'copy', kbd: 'Ctrl+C', tip: 'Copy the selection (or the whole cell when nothing is selected)', run: () => clipCopy(false) },
-      { label: 'Paste', icon: 'paste', kbd: 'Ctrl+V', tip: 'Paste plain text', run: clipPaste },
+      { label: 'Cut', icon: 'cut', kbd: 'Ctrl+X', tip: 'Cut the selected text', run: () => clipCopy(true), disabled: () => !selState().has },
+      { label: 'Copy', icon: 'copy', kbd: 'Ctrl+C', tip: 'Copy the selected text', run: () => clipCopy(false), disabled: () => !selState().has },
+      { label: 'Paste', icon: 'paste', kbd: 'Ctrl+V', tip: 'Paste plain text', run: clipPaste, disabled: () => !selState().target },
       '-',
       { label: 'Select All', icon: 'selectall', sub: [
         { label: 'All Form Fields', icon: 'selectall', tip: 'Highlight every editable cell and select the English name', run: selectAllFields },
@@ -1601,7 +1724,11 @@
 
   function refreshStates() {
     registry.forEach((r) => {
-      if (r.def.disabled) r.btn.disabled = !!r.def.disabled();
+      if (r.def.disabled) {
+        const d = !!r.def.disabled();
+        r.btn.disabled = d;
+        if (r.def.why) r.btn.title = d ? r.def.why() : (r.btn.dataset.title || r.btn.title);   // disabled kyun hai, tooltip mein
+      }
       if (r.def.check) r.btn.setAttribute('aria-checked', String(!!r.def.check()));
     });
   }
@@ -1665,6 +1792,7 @@
       b.setAttribute('role', def.check ? 'menuitemcheckbox' : 'menuitem');
       if (def.check) b.setAttribute('aria-checked', 'false');
       b.title = (def.tip || def.label) + (def.kbd ? ' (' + def.kbd + ')' : '');
+      b.dataset.title = b.title;
       b.append(def.check ? mk('span', 'mb-ico') : iconEl(def.icon), mk('span', 'mb-text', def.label), mk('span', 'mb-kbd', def.kbd || ''), mk('span', 'mb-arrow'));
       li.append(b);
 
@@ -1796,6 +1924,20 @@
     if (pb.print) pb.print.addEventListener('click', printWithGuard);
     if (pb.undo) pb.undo.addEventListener('click', undo);
     if (pb.redo) pb.redo.addEventListener('click', redo);
+    const bar = $('propbar');
+    if (bar) {
+      const chip = mk('button', 'pb-chip');
+      chip.type = 'button';
+      chip.id = 'pb-ready';
+      const label = mk('span', 'pb-chip__label', 'Checking…');
+      chip.append(label);
+      chip.addEventListener('click', () => {
+        if (!revealMissing().length) toast('All required fields are complete');
+      });
+      bar.append(chip);
+      ready.chip = chip;
+      ready.label = label;
+    }
 
     // viewport.js has no change event: it writes data-mode on #viewport and --cert-scale on <html>.
     if (typeof MutationObserver === 'function') {
@@ -2279,6 +2421,7 @@
     document.addEventListener('focusout', scheduleRecord, true);
 
     requestAnimationFrame(record);             // baseline = state after script.js loaded the saved data
+    requestAnimationFrame(refreshReady);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

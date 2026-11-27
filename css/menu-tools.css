@@ -28,6 +28,7 @@
   --mt-audit-ok:   #047857;
   --mt-find-hit:   #f59e0b;
   --mt-grid:       #00a3cc;
+  --mt-missing:    #d93025;
 
   --mt-ico-lock:   url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='11' width='14' height='10' rx='2'/%3E%3Cpath d='M8 11V8a4 4 0 0 1 8 0v3'/%3E%3C/svg%3E");
   --mt-ico-unlock: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='11' width='14' height='10' rx='2'/%3E%3Cpath d='M8 11V8a4 4 0 0 1 7.5-2'/%3E%3C/svg%3E");
@@ -327,6 +328,26 @@
     font-variant-numeric: tabular-nums;
   }
   .app-header .pb-sep { width: 1px; height: 20px; margin: 0 2px; background: var(--ws-border-subtle); }
+    .toolbar.app-header .pb-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-left: auto;
+    min-height: 28px;
+    padding: 3px 12px;
+    background: transparent;
+    color: var(--ws-text);
+    box-shadow: inset 0 0 0 1px var(--mt-missing);
+    border: 0;
+    border-radius: 99px;
+    font: 600 11.5px 'Inter', Arial, sans-serif;
+    cursor: pointer;
+  }
+  .toolbar.app-header .pb-chip::before { content: "\26A0"; color: var(--mt-missing); }
+  .toolbar.app-header .pb-chip.is-ok { box-shadow: inset 0 0 0 1px var(--mt-audit-ok); }
+  .toolbar.app-header .pb-chip.is-ok::before { content: "\2713"; color: var(--mt-audit-ok); }
+  .toolbar.app-header .pb-chip:hover { background: var(--ws-hover-bg); }
+  .toolbar.app-header .pb-chip:focus-visible { outline: 2px solid var(--ws-focus); outline-offset: 2px; }
 
   .toolbar.app-header .pb-ico {
     display: inline-grid;
@@ -482,6 +503,8 @@
 
   .mt-flash    { box-shadow: inset 0 0 0 2px var(--mt-grid) !important; }
   .mt-find-hit { box-shadow: inset 0 0 0 2px var(--mt-find-hit) !important; }
+  .mt-missing { box-shadow: inset 0 0 0 2px var(--mt-missing) !important; }
+  .upload.mt-missing { box-shadow: none !important; outline: 2px solid var(--mt-missing) !important; outline-offset: 1mm; }
 
 
   /* ================= ALIGNMENT GRID (child of #stage, scales with --cert-scale) ================= */
@@ -728,5 +751,5 @@
 /* ================= PRINT ISOLATION: nothing from this file may reach paper ================= */
 @media print {
   .app-header, .desktop-menubar, .floating-palette, .mt-grid, .mt-case-pop, .mt-toast, .mt-modal, .mt-find, dialog { display: none !important; }
-  .mt-audit-miss, .mt-audit-ok, .mt-flash, .mt-find-hit { box-shadow: none !important; outline: none !important; }
+  .mt-audit-miss, .mt-audit-ok, .mt-flash, .mt-find-hit, .mt-missing { box-shadow: none !important; outline: none !important; }
 }

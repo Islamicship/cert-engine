@@ -736,19 +736,42 @@
     return h ? h.d + '/' + h.m + '/' + h.y : fmtGregorian(d);
   }
 
-  function setAutoDates() {
-    const now = new Date();
-    const issue = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    /* Issue date PIN hoti hai (alag key 'cert-issued': PERSIST_SELECTOR / STORE_VERSION ko haath nahi lagta).
+     renderDates()  = pinned date dikhao (init, beforeprint, export: koi side effect nahi)
+     pinToday()     = aaj ki date pin karo (F5, New Record, batch start) */
+  const ISSUED_KEY = 'cert-issued';
+  let issuedIso = null;                                   // 'YYYY-MM-DD' (local), init() mein set hota hai
+
+  const isoOf = (d) => d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+  const isoToDate = (iso) => { const p = iso.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); };
+  const validIso = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && isoOf(isoToDate(s)) === s;
+
+  function readIssued() {
+    try { const v = JSON.parse(localStorage.getItem(ISSUED_KEY)); return v && validIso(v.d) ? v.d : null; }
+    catch (_) { return null; }
+  }
+  function writeIssued(iso) {
+    try { localStorage.setItem(ISSUED_KEY, JSON.stringify({ d: iso })); } catch (_) { /* storage unavailable */ }
+  }
+
+  function renderDates() {
+    const issue = isoToDate(issuedIso || isoOf(new Date()));
     const expiry = new Date(issue.getFullYear(), issue.getMonth(), issue.getDate() + VALIDITY_DAYS);
     const map = {
       'issue-ar': fmtHijri(issue),   'issue-en': fmtGregorian(issue),
       'expiry-ar': fmtHijri(expiry), 'expiry-en': fmtGregorian(expiry),
-      'cert-ym': pad2(now.getFullYear() % 100) + pad2(now.getMonth() + 1)
+      'cert-ym': pad2(issue.getFullYear() % 100) + pad2(issue.getMonth() + 1)   // cert number issue date ke saath chalta hai
     };
     document.querySelectorAll('[data-auto]').forEach((el) => {
       const v = map[el.getAttribute('data-auto')];
       if (v) el.textContent = v;
     });
+  }
+
+  function pinToday() {
+    issuedIso = isoOf(new Date());
+    writeIssued(issuedIso);
+    renderDates();
   }
 
   /* ----------------------------------------------------------
@@ -1320,14 +1343,33 @@
     });
     
     // Desktop Menu tools ke liye clean API expose karein
-    window.CertApp = {
+        window.CertApp = {
+      // Pinned date dobara dikhata hai. export-tools.js ka prepare() isi ko chalata hai: date badalti nahi.
       refreshDates: function () {
-        setAutoDates();
+        renderDates();
         updateDob(true);
         syncNationality('en');
         fitAll();
         saveNow();
       },
+      // Aaj ki date pin karo (F5, New Record, batch start)
+      pinToday: function () {
+        pinToday();
+        updateDob(true);
+        syncNationality('en');
+        fitAll();
+        saveNow();
+      },
+      getIssued: function () { return issuedIso; },
+      setIssued: function (iso) {                       // backup restore
+        if (!validIso(iso)) return false;
+        issuedIso = iso;
+        writeIssued(iso);
+        renderDates();
+        saveNow();
+        return true;
+      },
+      issueIsStale: function () { return !!issuedIso && issuedIso !== isoOf(new Date()); },
       fitAll: fitAll,
       save: saveNow,
       clearPhoto: function () {
@@ -1342,7 +1384,9 @@
     window.addEventListener('pagehide', saveNow);
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') saveNow(); });
 
-    setAutoDates();
+    issuedIso = readIssued();
+    if (!issuedIso) { issuedIso = isoOf(new Date()); writeIssued(issuedIso); }   // pehli load: aaj ki date pin
+    renderDates();
     updateDob(false);
     fitAll();
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitAll);
