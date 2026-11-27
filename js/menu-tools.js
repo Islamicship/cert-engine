@@ -1318,7 +1318,7 @@
   }
 
   /* ---------- batch state + pager ---------- */
-  const batch = { records: [], cache: {}, index: -1 };
+  const batch = { records: [], cache: {}, photos: {}, index: -1 };   // photos: index -> dataURL (null = is record ki photo nahi)
   let pager = null;
   // A column missing from the file must BLANK the field, never keep the previous candidate's value
   // (a certificate with someone else's passport number is the worst failure mode of a batch tool).
@@ -1345,9 +1345,15 @@
 
   function goTo(i) {
     if (!batchActive() || i < 0 || i >= batch.records.length) return;
-    if (batch.index >= 0) batch.cache[batch.index] = captureRecord();   // keep manual edits of the record we leave
+    const app = window.CertApp;
+    if (batch.index >= 0) {
+      batch.cache[batch.index] = captureRecord();   // keep manual edits of the record we leave
+      if (app && app.getPhoto) batch.photos[batch.index] = app.getPhoto();   // ...aur uski photo bhi
+    }
     batch.index = i;
     guarded(() => applyRecord(batchRecord(i)));
+    // Is record ki photo wapas lao; kabhi na dekha ho to khali: pichle record ki photo kabhi aage nahi jati
+    if (app && app.setPhoto) app.setPhoto(typeof batch.photos[i] === 'string' ? batch.photos[i] : null);
     renderPager();
   }
 
@@ -1355,7 +1361,7 @@
   const prevRecord = () => goTo(batch.index - 1);
 
   function endBatch() {
-    batch.records = []; batch.cache = {}; batch.index = -1;
+    batch.records = []; batch.cache = {}; batch.photos = {}; batch.index = -1;
     renderPager();
     toast('Batch ended');
   }
@@ -1371,11 +1377,12 @@
     records.forEach((r, i) => { if (!r.seq) r.seq = p6(start + i); });   // file mein diya hua seq override karta hai
     batch.records = records;
     batch.cache = {};
+    batch.photos = {};
     batch.index = -1;
     if (window.CertApp && typeof window.CertApp.pinToday === 'function') window.CertApp.pinToday();
     goTo(0);
-    toast(records.length + ' records loaded (seq ' + p6(start) + ' to ' + p6(start + records.length - 1) + ') — use ◀ / ▶ in the menu bar');
-  }
+    toast(records.length + ' records loaded (seq ' + p6(start) + ' to ' + p6(start + records.length - 1) + ') — photo cleared: add one per record, use ◀ / ▶ in the menu bar', 6000);
+    }
 
   /* ---------- batch dialog ---------- */
   const TEMPLATE_CSV =

@@ -1407,6 +1407,26 @@
         s = String(s);
         return s.length > 0 && Array.from(s).every((c) => FILTERS.arabic.re.test(c));
       },
+      // Batch navigation ke liye: photo ka src nikalna / set karna
+      getPhoto: function () {
+        const box = $('photo-box');
+        const img = $('photo-img');
+        if (!box || !img || box.classList.contains('is-empty')) return null;
+        return img.getAttribute('src') || null;
+      },
+      // Lock ko BYPASS karta hai: batch mein record badalne par photo hamesha usi record ki honi chahiye
+      setPhoto: function (dataUrl) {
+        const box = $('photo-box');
+        const frame = $('photo-frame');
+        if (!box || !frame) return false;
+        if (typeof dataUrl === 'string' && /^data:image\//i.test(dataUrl)) {
+          setImage(box, frame, dataUrl, true);      // IDB mein bhi jata hai: reload par wahi photo aayegi jo screen par hai
+        } else if (!box.classList.contains('is-empty')) {
+          clearImage(box);
+        }
+        return true;
+      },
+
       fitAll: fitAll,
       save: saveNow,
       clearPhoto: function () {
