@@ -109,7 +109,10 @@ html[data-theme="dark"] {
      never turn dark. Colours of .page itself are untouched. */
   .page { color-scheme: light; }
 
-  #stage > .page { box-shadow: var(--ws-page-shadow); }
+  /* Shadow #stage par: stage scaled size ke barabar hai, to shadow ka blur zoom ke saath scale nahi hota.
+     .page ka apna shadow (style.css) yahan band hai, warna double shadow aayega. Print mein yeh dono hain nahi. */
+  #stage { box-shadow: var(--ws-page-shadow); }
+  #stage > .page { box-shadow: none; }
 
 
   /* ================= TOOLBAR ================= */
@@ -130,11 +133,7 @@ html[data-theme="dark"] {
     justify-content: flex-end;
     transition: background-color .25s ease, border-color .25s ease, color .25s ease;
   }
-  .toolbar .actions {
-    flex: 0 1 auto;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-  }
+
 
   .toolbar button {
     display: inline-flex;
@@ -166,18 +165,7 @@ html[data-theme="dark"] {
   }
   .toolbar button#lock-btn[aria-pressed="true"]:hover { background: var(--ws-accent-hover); }
 
-  /* Secondary buttons (Fit, Theme, Install) */
-  .toolbar button.ghost {
-    background: transparent;
-    color: var(--ws-muted);
-    box-shadow: inset 0 0 0 1px var(--ws-border-strong);
-  }
-  .toolbar button.ghost:hover { background: var(--ws-hover-bg); }
 
-  @media (pointer: coarse) {
-    .toolbar button { min-height: 44px; padding-left: 16px; padding-right: 16px; }
-    .toolbar button.theme-btn { min-width: 44px; padding-left: 12px; padding-right: 12px; }
-  }
 
 
   /* ================= THEME TOGGLE BUTTON ================= */

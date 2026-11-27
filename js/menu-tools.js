@@ -292,7 +292,7 @@
         if (block && out && !out.endsWith('\n')) out += '\n';
       });
     })(root);
-    return out.replace(/ /g, ' ').replace(/\r/g, '').replace(/\n+$/, '');
+    return out.replace(/\u00A0/g, ' ').replace(/\r/g, '').replace(/\n+$/, '');
   }
 
   function readValue(el) {
@@ -490,7 +490,7 @@
     if (file.size > MAX_FILE_BYTES) { toast('Import failed: file is too large'); return; }
 
     let data;
-    try { data = JSON.parse((await file.text()).replace(/^﻿/, '')); }
+    try { data = JSON.parse((await file.text()).replace(/^\uFEFF/, '')); }
     catch (_) { toast('Import failed: not valid JSON'); return; }
 
     if (Array.isArray(data) || (data && Array.isArray(data.records))) {
@@ -547,7 +547,17 @@
       toast(kind.toUpperCase() + ' saved: ' + r.name);
     } catch (err) {
       console.error('[export]', err);
-      toast('Export failed: ' + (err && err.message ? err.message : 'unknown error'));
+      const why = err && err.message ? err.message : 'unknown error';
+      // Safari / blocked canvas: PDF ke liye print dialog ka vector raasta offer karo
+      if (kind === 'pdf' && await confirmDialog(
+        'PDF export failed',
+        why + '. Open the print dialog instead? Choose "Save as PDF" there (vector PDF, selectable text).',
+        'Open print dialog'
+      )) {
+        window.print();
+      } else {
+        toast('Export failed: ' + why);
+      }
     } finally {
       exporting = false;
       restoreEd();
@@ -822,7 +832,7 @@
     return out;
   }
 
-  const findText = (el) => readValue(el).replace(/ /g, ' ');
+  const findText = (el) => readValue(el).replace(/\u00A0/g, ' ');
 
   function findHits(needle, mcase) {
     const re = new RegExp(escapeRe(needle), mcase ? 'g' : 'gi');
@@ -1218,8 +1228,7 @@
   Object.keys(ALIASES).forEach((f) => { KEY_TO_FIELD[f.toLowerCase()] = f; ALIASES[f].forEach((k) => { KEY_TO_FIELD[k] = f; }); });
   const normKey = (k) => String(k).toLowerCase().replace(/[^a-z0-9]/g, '');
 
-  const AR_RE = /^[ء-ؿـ-ٰٟٮ-ۓۺ-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿ ]+$/;   // == script.js 'arabic' filter
-
+  const isArabicText = (s) => (window.CertApp && window.CertApp.isArabicText ? window.CertApp.isArabicText(s) : true);
   function normDob(s) {
     s = String(s).trim();
     let d, m, y, x;
@@ -1232,7 +1241,7 @@
   }
 
   function parseCsv(text) {
-    text = text.replace(/^﻿/, '');
+    text = text.replace(/^\uFEFF/, '');
     const firstLine = text.split(/\r?\n/, 1)[0];
     const delim = [',', ';', '\t']
       .map((d) => [d, firstLine.split(d).length])
@@ -1258,7 +1267,7 @@
 
   // -> { records, warnings, ignoredCols }
   function parseBatch(text) {
-    const trimmed = text.replace(/^﻿/, '').trim();
+    const trimmed = text.replace(/^\uFEFF/, '').trim();
     let objs;
     const ignored = new Set();
 
@@ -1298,7 +1307,7 @@
       if (rec.nameEn !== undefined && rec.nameEn && !/^[A-Za-z \-]+$/.test(rec.nameEn)) {
         warnings.push('Row ' + n + ': English name has characters outside A-Z, space, hyphen — they will be dropped');
       }
-      if (rec.nameAr !== undefined && rec.nameAr && !AR_RE.test(rec.nameAr)) {
+      if (rec.nameAr !== undefined && rec.nameAr && !isArabicText(rec.nameAr)) {
         warnings.push('Row ' + n + ': Arabic name has non-Arabic characters — they will be dropped');
       }
       if (rec.seq !== undefined) rec.seq = rec.seq.replace(/\D/g, '').slice(0, 6);
@@ -1370,7 +1379,7 @@
 
   /* ---------- batch dialog ---------- */
   const TEMPLATE_CSV =
-    '﻿name_en,name_ar,id,passport,dob,nationality,nationality_ar,seq\r\n' +
+    '\uFEFFname_en,name_ar,name_ar,id,passport,dob,nationality,nationality_ar,seq\r\n' +
     'MOHAMMED ALI,محمد علي,212345678,AB1234567,24/01/1990,Pakistan,,000001\r\n';
 
   function openBatchDialog() {
@@ -1477,7 +1486,7 @@
     ['Menus', [['Alt + F', 'File'], ['Alt + E', 'Edit'], ['Alt + V', 'View'], ['Alt + D', 'Data Tools'], ['Alt + H', 'Help'],
       ['↑ ↓', 'Move through the menu'], ['← →', 'Switch menu / open or close submenu'],
       ['Enter', 'Run the highlighted item'], ['Esc', 'Close menu, back to the cell']]],
-    ['File', [['Ctrl + N', 'New record'], ['Ctrl + O', 'Open / import JSON'], ['Ctrl + S', 'Save as PDF (300 DPI)'], ['Ctrl + Shift + S', 'Save as JPG (300 DPI)'], ['Ctrl + P', 'Print / Save as PDF']]],
+    ['File', [['Ctrl + N', 'New record'], ['Ctrl + O', 'Open / import JSON'], ['Ctrl + S', 'Save as PDF (image, 300 DPI)'], ['Ctrl + Shift + S', 'Save as JPG (300 DPI)'], ['Ctrl + P', 'Print / Save as PDF']]],
     ['Edit', [['Ctrl + Z', 'Undo'], ['Ctrl + Y', 'Redo'], ['Ctrl + X / C / V', 'Cut / Copy / Paste'], ['Ctrl + F', 'Find and Replace']]],
     ['View', [['F4', 'Fit to width'], ['Shift + F4', 'Fit whole page'], ['Ctrl + 1', 'Actual size (100%)'], ['Ctrl + +  /  Ctrl + −', 'Zoom in / out']]],
     ['Data', [['F5', 'Recalculate dates & sync']]],
@@ -1605,7 +1614,7 @@
     { id: 'file', host: 'bar', label: 'File', access: 'f', alt: 'فائل', items: [
       { label: 'New Record', icon: 'new', kbd: 'Ctrl+N', tip: 'Reset record fields and photo to defaults', run: newRecord },
       { label: 'Open / Import JSON…', icon: 'open', kbd: 'Ctrl+O', tip: 'Load a backup (.json / .cert)', run: importFile },
-      { label: 'Save as PDF (High Quality)', icon: 'pdf', kbd: 'Ctrl+S', tip: 'A4 PDF, 300 DPI, one click', run: () => exportAs('pdf'), disabled: () => missingRequired().length > 0, why: whyBlocked },
+      { label: 'Save as PDF (image, 300 DPI)', icon: 'pdf', kbd: 'Ctrl+S', tip: 'Flat image PDF: text is not selectable. Use Print for a vector PDF', run: () => exportAs('pdf'), disabled: () => missingRequired().length > 0, why: whyBlocked },
       { label: 'Save as JPG (High Quality)', icon: 'image', kbd: 'Ctrl+Shift+S', tip: 'A4 JPG, 2480 x 3508 px (300 DPI)', run: () => exportAs('jpg'), disabled: () => missingRequired().length > 0, why: whyBlocked },
       { label: 'Save Backup As…', icon: 'save', tip: 'Download field values and photos as JSON', run: exportBackup },
       '-',
@@ -2243,7 +2252,7 @@
     if (mode === 'lower') return s.toLowerCase();
     if (mode === 'title') return s.toLowerCase().replace(/(^|[\s\-])(\p{L})/gu, (m, a, b) => a + b.toUpperCase());
     // trim: collapse runs of spaces per line, KEEP line breaks (disclaimer is multi-line)
-    return s.split('\n').map((l) => l.replace(/[ \t ]+/g, ' ').trim()).join('\n');
+    return s.split('\n').map((l) => l.replace(/[ \t\u00A0]+/g, ' ').trim()).join('\n');
   }
 
   function selectionTarget() {

@@ -5,10 +5,10 @@
    VERTICAL BUDGET (must sum to 297mm):
      header ............ 61.348
      grid (20 tiers + 19 gaps) 194.522   = 20*7.923 + 19*1.898
-     disclaimer region . 26.757 (text vertically centred)
-     ribbon ............ 14.373   (print: pinned to the bottom edge of the paper)
-     --------------------------------
-     below last tier = 26.757 + 14.373 = 41.13mm
+      disclaimer region . 26.735 (text vertically centred)
+      ribbon ............ 14.395   (print: pinned to the bottom edge of the paper)
+      --------------------------------
+      below last tier = 26.735 + 14.395 = 41.13mm
    ========================================================== */
 
 :root {
@@ -179,7 +179,6 @@ body {
   display: flex; align-items: center; justify-content: flex-end; gap: 12px;
   font-size: 12px; color: var(--muted);
 }
-.toolbar .actions { display: inline-flex; gap: 8px; flex: none; }
 .toolbar button {
   font: 600 12px 'Inter', Arial, sans-serif;
   background: var(--green); color: #fff;
@@ -187,7 +186,6 @@ body {
 }
 .toolbar button#lock-btn { background: #fff; color: var(--green); box-shadow: inset 0 0 0 1px var(--green); }
 .toolbar button#lock-btn[aria-pressed="true"] { background: var(--green); color: #fff; }
-.toolbar button.ghost { background: transparent; color: var(--muted); box-shadow: inset 0 0 0 1px #c3c9cf; }
 .toolbar button:hover { filter: brightness(.93); }
 .toolbar button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
 
@@ -679,7 +677,7 @@ body {
 .ctx-menu hr { border: 0; border-top: 1px solid #e6e9ec; margin: 4px 2px; }
 
 /* ==========================================================
-   BOTTOM REGION  (disclaimer region 26.757 + ribbon 14.373 = 41.13mm)
+   BOTTOM REGION  (disclaimer region 26.735 + 14.395 = 41.13mm)
    ========================================================== */
 /* Region between the last tier and the ribbon: the two paragraphs are centred vertically in it,
    and each paragraph centres its own text vertically, so EN and AR share one horizontal axis. */
@@ -692,7 +690,7 @@ body {
   align-items: center;
 }
 .note p {
-  height: 17.14mm;                      /* 4 lines x 4.285mm: the 9pt English text needs 4 lines */
+  height: 17.14mm;                     /* 4 lines x 4.285mm: Arabic box. English .note .en neeche 12.855mm (3 lines) se override karta hai */
   overflow: hidden;
   display: flex; flex-direction: column; justify-content: center;
   font-size: 9pt;
@@ -703,9 +701,7 @@ body {
   width: 71.628mm;
   height: 12.855mm;
   max-height: 12.855mm;
-  line-height: 4.285mm;
   font-family: var(--font-din-en);
-  font-size: 9pt;
   font-weight: 700;
   color: var(--text-gray);
   direction: ltr; text-align: left;
@@ -713,7 +709,6 @@ body {
 .note .ar {
   width: var(--note-ar-w);
   font-family: var(--font-din-ar);
-  font-size: 9pt;
   font-weight: 700;
   color: var(--text-green);
   direction: rtl; text-align: right;

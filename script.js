@@ -314,18 +314,18 @@
       if (!file || isLocked(box)) return;
 
       if (!file.type || !file.type.startsWith('image/')) {
-        alert('Sirf image file select karo (JPG, PNG, WEBP, SVG).');
-        return;
-      }
+     notify('Please choose an image file (JPG, PNG, WEBP or SVG).');
+     return;
+   }
       if (file.size > MAX_IMAGE_BYTES) {
-        alert('Image 5 MB se choti honi chahiye.');
-        return;
-      }
+     notify('Image must be smaller than 5 MB.');
+     return;
+   }
 
       const reader = new FileReader();
-      reader.onload = () => setImage(box, frame, String(reader.result), true);
-      reader.onerror = () => alert('Image read nahi ho saki. Dusri file try karo.');
-      reader.readAsDataURL(file);
+   reader.onload = () => setImage(box, frame, String(reader.result), true);
+   reader.onerror = () => notify('The image could not be read. Try another file.');
+   reader.readAsDataURL(file);
     }
     box._loadFile = loadFile;
 
@@ -476,22 +476,49 @@
     return s;
   }
 
+  // Pure function: yahi rules poore text par bhi lagte hain aur caret se pehle wale hisse par bhi
+  function normalizeValue(el, raw) {
+    if (isDobField(el)) return maskDob(raw.replace(/\D/g, '').slice(0, 8));
+    let out = filterText(el, raw);
+    if (el.hasAttribute('data-collapse')) out = out.replace(/^ +/, '').replace(/ {2,}/g, ' ');
+    const max = parseInt(el.getAttribute('data-max'), 10);
+    return max ? out.slice(0, max) : out;
+  }
+
+  // Caret ka offset el ke andar (logical order: RTL mein bhi theek). Selection ho ya bahar ho to -1
+  function caretOffset(el) {
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount || !sel.isCollapsed || !el.contains(sel.anchorNode)) return -1;
+    const r = document.createRange();
+    r.selectNodeContents(el);
+    r.setEnd(sel.anchorNode, sel.anchorOffset);
+    return r.toString().length;
+  }
+
+  function setCaret(el, pos) {
+    const node = el.firstChild;
+    if (!node) return;
+    const r = document.createRange();
+    r.setStart(node, Math.min(pos, node.length));
+    r.collapse(true);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(r);
+  }
+
   function normalizeField(el) {
     const before = el.textContent;
-    let after;
-    if (isDobField(el)) {
-      after = maskDob(before.replace(/\D/g, '').slice(0, 8));
-    } else {
-      after = filterText(el, before);
-      if (el.hasAttribute('data-collapse')) after = after.replace(/^ +/, '').replace(/ {2,}/g, ' ');
-      const max = parseInt(el.getAttribute('data-max'), 10);
-      if (max) after = after.slice(0, max);
-    }
-    if (after !== before) {
-      el.textContent = after;
-      caretToEnd(el);
-    }
+    const after = normalizeValue(el, before);
+    if (after === before) return;
+    const focused = document.activeElement === el;
+    const c = focused ? caretOffset(el) : -1;
+    el.textContent = after;
+    if (!focused) return;
+    if (c < 0) { caretToEnd(el); return; }
+    // Caret se pehle wale hisse ko wahi rules se guzaro: uski length hi naya caret hai
+    setCaret(el, normalizeValue(el, before.slice(0, c)).length);
   }
+
 
   // Paste hamesha plain text: Word/web ka HTML/fonts/colors certificate kharab kar dete hain.
   document.addEventListener('paste', (e) => {
@@ -868,7 +895,7 @@
   const BY_EN = {};
   const BY_AR = {};
   NATIONALITIES.forEach((n) => { BY_EN[normEn(n[0])] = n; BY_AR[normAr(n[1])] = n; });
-
+  let kbFocus = false;        // true jab focus Tab navigation se aaya: combo list auto-open na ho
   let lastAuto = '';          // aakhri auto-filled Arabic naam (stale hone par clear karne ke liye)
   let enCombo = null;
   let arCombo = null;
@@ -1058,8 +1085,8 @@
     input.addEventListener('focus', () => {
       typed = false;
       input.select();
-      input._selectOnUp = true;
-      open();
+      input._selectOnUp = !kbFocus;
+      if (!kbFocus) open();       // Tab se aaye to band; click / ArrowDown / typing se khulti hai
     });
     input.addEventListener('mouseup', (e) => {
       if (input._selectOnUp) { e.preventDefault(); input._selectOnUp = false; }
@@ -1178,7 +1205,7 @@
 
   
 /* ----------------------------------------------------------
-   * Floating Smart Tooltip Controller (1s Delay + Hide on Click)
+   * Floating Smart Tooltip Controller (0.5s Delay + Hide on Click)
    * ---------------------------------------------------------- */
   function initSmartTooltips() {
     const tip = document.createElement('div');
@@ -1223,7 +1250,7 @@
         return;
       }
 
-      // 1 Second (1000ms) hover delay
+      // 500ms hover delay
       clearTimeout(hoverTimer);
       hoverTimer = setTimeout(() => {
         tip.textContent = hint;
@@ -1267,7 +1294,7 @@
     }
   }
 
-  function initExcelTabNavigation() {
+    function initExcelTabNavigation() {
     const SELECTOR = '[contenteditable="true"], .combo-input:not([disabled])';
 
     document.addEventListener('keydown', (e) => {
@@ -1277,24 +1304,32 @@
       const current = active && active.closest(SELECTOR);
       if (!current) return;
 
-      // Live query taake Locked/Unlocked fields dynamically update hon
+      // Live query + AR/EN mirror (data-sync) duplicates skip: har group ka sirf pehla (Arabic tier) cell
+      const seen = new Set();
       const fields = Array.from(document.querySelectorAll(SELECTOR)).filter((el) => {
-        return el.offsetWidth > 0 && el.offsetHeight > 0 && !el.closest('[aria-hidden="true"]');
+        if (!(el.offsetWidth > 0 && el.offsetHeight > 0) || el.closest('[aria-hidden="true"]')) return false;
+        const key = el.getAttribute('data-sync');
+        if (!key) return true;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
       });
-
       if (fields.length <= 1) return;
 
-      const currentIndex = fields.indexOf(current);
+      // Agar user mirror (English tier) mein hai, to uska representative dhoondo
+      const key = current.getAttribute('data-sync');
+      const anchor = key ? fields.find((f) => f.getAttribute('data-sync') === key) : current;
+      const currentIndex = fields.indexOf(anchor);
       if (currentIndex === -1) return;
 
-      e.preventDefault(); // Browser ka aam jump roko
+      e.preventDefault();
 
       const step = e.shiftKey ? -1 : 1;
-      const nextIndex = (currentIndex + step + fields.length) % fields.length;
-      const nextEl = fields[nextIndex];
+      const nextEl = fields[(currentIndex + step + fields.length) % fields.length];
 
+      kbFocus = true;
       nextEl.focus();
-      // Smooth frame render ke sath poora text select karo
+      kbFocus = false;
       requestAnimationFrame(() => selectAllContent(nextEl));
     });
   }
@@ -1328,9 +1363,6 @@
     
 
     document.querySelectorAll('[data-exact]').forEach((el) => checkExact(el, true));
-
-    const printBtn = $('print-btn');
-    if (printBtn) printBtn.addEventListener('click', () => window.print());
 
     window.addEventListener('beforeprint', () => {
       // blur pehle: focusout rules (padding/default restore) aur nationality commit chal jaate hain
@@ -1370,6 +1402,11 @@
         return true;
       },
       issueIsStale: function () { return !!issuedIso && issuedIso !== isoOf(new Date()); },
+      // menu-tools.js ka batch validator yahi use karta hai: Arabic ki definition sirf FILTERS.arabic mein
+      isArabicText: function (s) {
+        s = String(s);
+        return s.length > 0 && Array.from(s).every((c) => FILTERS.arabic.re.test(c));
+      },
       fitAll: fitAll,
       save: saveNow,
       clearPhoto: function () {
