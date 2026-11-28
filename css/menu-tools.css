@@ -753,3 +753,472 @@
   .app-header, .desktop-menubar, .floating-palette, .mt-grid, .mt-case-pop, .mt-toast, .mt-modal, .mt-find, dialog { display: none !important; }
   .mt-audit-miss, .mt-audit-ok, .mt-flash, .mt-find-hit, .mt-missing { box-shadow: none !important; outline: none !important; }
 }
+
+/* ================= MOBILE CHROME (<= 768px) ================= */
+@media screen {
+
+  .toolbar.app-header .m-only,
+  .app-header .m-backdrop,
+  .app-header .m-drawer {
+    display: none;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  :root {
+    --m-bar-h: 58px;
+  }
+
+  /* ---- App bar (re-uses the existing header: viewport.js keeps measuring it) ---- */
+  .toolbar.app-header {
+    position: sticky;
+    top: 0;
+    z-index: 900;
+  }
+
+  .app-header .desktop-menubar,
+  .app-header .ah-prop {
+    display: none;
+  }
+
+  .app-header .ah-top {
+    flex-wrap: nowrap;
+    min-height: 48px;
+    gap: 2px;
+  }
+
+  .toolbar.app-header .m-only {
+    display: inline-grid;
+  }
+
+  .toolbar.app-header .tray-btn {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    min-height: 40px;
+  }
+
+  .toolbar.app-header button#lock-btn,
+  .toolbar.app-header .tray-btn#install-btn {
+    display: none;
+  }
+
+  /* both live in the drawer */
+
+  .toolbar.app-header .pb-chip {
+    flex: 1 1 0;
+    min-width: 0;
+    margin: 0 4px;
+    padding: 3px 8px;
+    justify-content: center;
+  }
+
+  .app-header .pb-chip__label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+    /* ---- Off-canvas drawer ---- */
+    :root {
+      --m-chev-d: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    }
+  
+        .app-header .m-backdrop {
+          display: block;
+          position: fixed;
+          inset: 0;
+          z-index: 955;
+          background: rgba(0, 0, 0, .45);
+          -webkit-backdrop-filter: blur(8px);
+          backdrop-filter: blur(8px);
+          opacity: 0;
+          visibility: hidden;
+          pointer-events: none;
+          touch-action: none;
+          -webkit-tap-highlight-color: transparent;
+          transition: opacity .28s ease, visibility 0s linear .28s;
+        }
+    
+        .app-header .m-backdrop.is-open {
+          opacity: 1;
+          visibility: visible;
+          pointer-events: auto;
+          cursor: pointer;
+          transition-delay: 0s;
+        }
+  
+        .app-header .m-drawer {
+          display: flex;
+          flex-direction: column;
+          position: fixed;
+          top: calc(env(safe-area-inset-top, 0px) + 8px);
+          left: calc(env(safe-area-inset-left, 0px) + 8px);
+          bottom: auto;
+          /* content-height card: no empty void */
+          z-index: 960;
+          width: min(280px, 72vw);
+          max-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 16px);
+          max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 16px);
+          overflow: hidden;
+          padding: 0;
+          background: var(--ws-surface);
+          color: var(--ws-text);
+          border: 1px solid var(--ws-border-subtle);
+          border-radius: 20px;
+          box-shadow: var(--ws-shadow-pop);
+          transform: translate3d(calc(-100% - 24px), 0, 0);
+          visibility: hidden;
+          transition: transform .26s cubic-bezier(.4, 0, .2, 1), visibility 0s linear .26s;
+          touch-action: pan-y;
+        }
+    
+        .app-header .m-drawer:focus {
+          outline: none;
+        }
+    
+        /* Accordion reset on re-open: no animation (JS toggles this class for one frame) */
+        .app-header .m-drawer.is-reset .m-sec__panel,
+        .toolbar.app-header .m-drawer.is-reset .m-sec__h::after {
+          transition: none !important;
+        }
+  
+    .app-header .m-drawer.is-open {
+      transform: none;
+      visibility: visible;
+      transition: transform .34s cubic-bezier(.16, 1, .3, 1), visibility 0s linear 0s;
+      /* open: expo-out */
+    }
+  
+        .app-header .m-drawer__head {
+          flex: none;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          min-height: 44px;
+          padding: 10px 10px 4px 18px;
+          color: var(--ws-muted);
+          font: 700 11px/1.3 'Inter', Arial, sans-serif;
+          letter-spacing: .08em;
+          text-transform: uppercase;
+        }
+    
+        .toolbar.app-header .m-drawer .m-drawer__close {
+          display: inline-grid;
+          place-items: center;
+          flex: none;
+          width: 36px;
+          min-width: 36px;
+          height: 36px;
+          min-height: 36px;
+          padding: 0;
+          background: transparent;
+          color: var(--ws-muted);
+          box-shadow: none;
+          border: 0;
+          border-radius: 10px;
+          filter: none;
+          transform: none;
+          cursor: pointer;
+          transition: background-color .15s ease, color .15s ease, transform .15s cubic-bezier(.16, 1, .3, 1);
+        }
+    
+        .toolbar.app-header .m-drawer .m-drawer__close svg {
+          width: 18px;
+          height: 18px;
+        }
+    
+        @media (hover: hover) {
+          .toolbar.app-header .m-drawer .m-drawer__close:hover {
+            background: var(--ws-hover-bg);
+            color: var(--ws-text);
+          }
+        }
+    
+        .toolbar.app-header .m-drawer .m-drawer__close:active {
+          background: var(--ws-hover-bg);
+          color: var(--ws-text);
+          transform: scale(.94);
+        }
+    
+        .toolbar.app-header .m-drawer .m-drawer__close:focus-visible {
+          outline: 2px solid var(--ws-focus);
+          outline-offset: 2px;
+        }
+  
+    .app-header .m-drawer__body {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      padding: 4px 8px;
+    }
+  
+    .app-header .m-sec+.m-sec {
+      margin-top: 2px;
+    }
+  
+    /* ---- Section header (icon + label + chevron) ---- */
+    .toolbar.app-header .m-sec__h {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      min-height: 48px;
+      padding: 8px 12px;
+      background: transparent;
+      color: var(--ws-text);
+      box-shadow: none;
+      border: 0;
+      border-radius: 12px;
+      text-align: left;
+      filter: none;
+      transform: none;
+      cursor: pointer;
+      font: 700 13.5px 'Inter', Arial, sans-serif;
+      transition: background-color .15s ease, transform .15s cubic-bezier(.16, 1, .3, 1);
+    }
+  
+    .toolbar.app-header .m-sec__h:focus-visible {
+      outline: 2px solid var(--ws-focus);
+      outline-offset: -2px;
+    }
+  
+    .app-header .m-sec__ico {
+      display: grid;
+      place-items: center;
+      flex: none;
+      margin-right: 10px;
+      opacity: .85;
+    }
+  
+    .app-header .m-sec__ico svg {
+      width: 18px;
+      height: 18px;
+      stroke-width: 2;
+    }
+  
+    .toolbar.app-header .m-sec__h[aria-expanded="true"] .m-sec__ico {
+      color: var(--ws-accent-text);
+      opacity: 1;
+    }
+  
+    .toolbar.app-header .m-sec__h::after {
+      content: "";
+      flex: none;
+      margin-left: auto;
+      width: 10px;
+      height: 10px;
+      background: currentColor;
+      opacity: .6;
+      -webkit-mask: var(--m-chev-d) center / contain no-repeat;
+      mask: var(--m-chev-d) center / contain no-repeat;
+      transition: transform .2s cubic-bezier(.16, 1, .3, 1);
+    }
+  
+    .toolbar.app-header .m-sec__h[aria-expanded="true"]::after {
+      transform: rotate(180deg);
+    }
+  
+    /* ---- Accordion: grid 0fr -> 1fr (Chrome 107+/Safari 16+; older WebViews just snap, nothing breaks) ---- */
+    .app-header .m-sec__panel {
+      display: grid;
+      grid-template-rows: 0fr;
+      opacity: 0;
+      transition: grid-template-rows .3s cubic-bezier(.16, 1, .3, 1), opacity .2s ease;
+    }
+  
+    .app-header .m-sec__panel.is-open {
+      grid-template-rows: 1fr;
+      opacity: 1;
+    }
+  
+    .app-header .m-sec__inner {
+      min-height: 0;
+      overflow: hidden;
+    }
+  
+    .app-header .m-drawer .mb-list.m-list {
+      position: static;
+      min-width: 0;
+      padding: 2px 0 6px 6px;
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+    }
+  
+    /* ---- Items inside the drawer ---- */
+    .toolbar.app-header .m-drawer .mb-item {
+      min-height: 44px;
+      grid-template-columns: 20px minmax(0, 1fr) 12px;
+      /* kbd column removed below */
+      white-space: normal;
+      line-height: 1.25;
+      transition: background-color .15s ease, transform .15s cubic-bezier(.16, 1, .3, 1);
+    }
+  
+    .app-header .m-drawer .mb-kbd {
+      display: none;
+    }
+  
+    /* shortcuts are meaningless on touch and eat width */
+    .app-header .m-drawer .mb-item[aria-haspopup] .mb-arrow {
+      transition: transform .2s cubic-bezier(.16, 1, .3, 1);
+    }
+  
+    .app-header .m-drawer .mb-item[aria-expanded="true"] .mb-arrow {
+      transform: rotate(90deg);
+    }
+  
+    /* Touch feedback. Order matters: hover reset first, :active last (same specificity, later wins). */
+    @media (hover: none) {
+  
+      .toolbar.app-header .m-drawer .mb-item:hover:not(:disabled),
+      .toolbar.app-header .m-drawer .m-sec__h:hover {
+        background: transparent;
+      }
+    }
+  
+    @media (hover: hover) {
+      .toolbar.app-header .m-sec__h:hover {
+        background: var(--ws-hover-bg);
+      }
+    }
+  
+    .toolbar.app-header .m-drawer .mb-item:active:not(:disabled),
+    .toolbar.app-header .m-drawer .m-sec__h:active,
+    .toolbar.app-header .m-drawer .m-foot__theme:active {
+      background: var(--ws-hover-bg);
+      transform: scale(.98);
+    }
+  
+    /* ---- Footer dock ---- */
+    .app-header .m-drawer__foot {
+      flex: none;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 8px 10px 10px;
+      padding: 10px 10px 10px 14px;
+      background: var(--ws-bg);
+      border: 1px solid var(--ws-border-subtle);
+      border-radius: 16px;
+    }
+  
+    .app-header .m-foot__info {
+      display: grid;
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+  
+    .app-header .m-foot__name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font: 700 12px/1.3 'Inter', Arial, sans-serif;
+    }
+  
+    .app-header .m-foot__ver {
+      color: var(--ws-muted);
+      font: 600 11px/1.3 'Inter', Arial, sans-serif;
+    }
+  
+    .toolbar.app-header .m-foot__theme {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 44px;
+      padding: 0 12px;
+      background: var(--ws-surface);
+      color: var(--ws-text);
+      box-shadow: inset 0 0 0 1px var(--ws-border-strong);
+      border: 0;
+      border-radius: 12px;
+      filter: none;
+      transform: none;
+      cursor: pointer;
+      font: 600 12px 'Inter', Arial, sans-serif;
+      transition: background-color .15s ease, transform .15s cubic-bezier(.16, 1, .3, 1);
+    }
+  
+    .toolbar.app-header .m-foot__theme:focus-visible {
+      outline: 2px solid var(--ws-focus);
+      outline-offset: 2px;
+    }
+  
+    .app-header .m-foot__ico {
+      display: grid;
+      place-items: center;
+    }
+  
+    .app-header .m-foot__ico svg {
+      width: 16px;
+      height: 16px;
+    }
+  
+    @media (prefers-reduced-motion: reduce) {
+  
+      .app-header .m-drawer,
+      .app-header .m-backdrop,
+      .app-header .m-sec__panel,
+      .toolbar.app-header .m-sec__h,
+      .toolbar.app-header .m-sec__h::after,
+      .toolbar.app-header .m-drawer .mb-item,
+      .app-header .m-drawer .mb-arrow {
+        transition: none !important;
+      }
+    }
+
+  /* ---- Canvas clearance: header is in flow, bottom bar is fixed. viewport.js subtracts this padding, so Fit Page stays exact ---- */
+  #viewport {
+    padding: 12px 12px calc(var(--m-bar-h) + env(safe-area-inset-bottom, 0px) + 16px);
+  }
+
+  /* ---- Tool palette -> docked bottom action bar ---- */
+  .floating-palette {
+    top: auto !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    /* beats inline left/top from a saved desktop drag */
+    width: 100%;
+    max-width: none;
+    max-height: none;
+    overflow: visible;
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: center;
+    gap: 0;
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+    border-width: 1px 0 0;
+    border-radius: 0;
+  }
+
+  .floating-palette .fp-grip,
+  .floating-palette .fp-sep,
+  #palette-hand {
+    display: none;
+  }
+
+  .floating-palette .fp-btn {
+    width: 48px;
+    height: 44px;
+  }
+
+  .mt-toast {
+    bottom: calc(var(--m-bar-h) + env(safe-area-inset-bottom, 0px) + 12px);
+  }
+
+  /* ---- Keyboard open: bar hides, extra scroll room so the cell can reach mid-screen (iOS overlays the keyboard) ---- */
+  html.kb-open .floating-palette {
+    display: none;
+  }
+
+  html.kb-open #viewport {
+    padding-bottom: 50vh;
+  }
+
+  html.kb-open .mt-toast {
+    bottom: 16px;
+  }
+}

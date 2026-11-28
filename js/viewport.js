@@ -251,6 +251,82 @@
   renderButton();
 }
 
+  /**
+   * Absolute-scale zoom keeping the UNSCALED page point (px,py) under screen point (cx,cy).
+   * One write + one forced layout read per call: callers must rAF-throttle.
+   */
+  function zoomAt(s, px, py, cx, cy) {
+    if (printing) return;
+    setZoom(s);
+    const r = stage.getBoundingClientRect();
+    viewport.scrollLeft += (r.left + px * scale) - cx;
+    window.scrollBy(0, (r.top + py * scale) - cy);
+  }
+
+  function initGestures() {
+    const dist = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+    const mid = (t) => ({ x: (t[0].clientX + t[1].clientX) / 2, y: (t[0].clientY + t[1].clientY) / 2 });
+    const anchor = (cx, cy) => {
+      const r = stage.getBoundingClientRect(), s = scale || 1;
+      return { px: (cx - r.left) / s, py: (cy - r.top) / s };
+    };
+    let g = null, pend = null, raf = 0;
+
+    // ---- 2-finger pinch (Android + iOS) ----
+    viewport.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 2) return;
+      const d0 = dist(e.touches);
+      if (!(d0 > 0)) return;
+      const m = mid(e.touches);
+      g = Object.assign({ d0: d0, s0: scale || 1 }, anchor(m.x, m.y));
+      page.style.willChange = 'transform';          // smooth during gesture; removed at end so text re-rasterises crisp
+      if (e.cancelable) e.preventDefault();
+    }, { passive: false });
+
+    viewport.addEventListener('touchmove', (e) => {
+      if (!g || e.touches.length !== 2) return;
+      if (e.cancelable) e.preventDefault();
+      const m = mid(e.touches);
+      pend = { s: g.s0 * dist(e.touches) / g.d0, x: m.x, y: m.y };
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        if (g && pend) zoomAt(pend.s, g.px, g.py, pend.x, pend.y);
+        pend = null;
+      });
+    }, { passive: false });
+
+    const end = (e) => {
+      if (!g || e.touches.length >= 2) return;
+      g = null; pend = null;
+      page.style.willChange = '';
+    };
+    viewport.addEventListener('touchend', end);
+    viewport.addEventListener('touchcancel', end);
+
+    // ---- Ctrl + wheel / trackpad pinch: window-level, so zoom over the header can't zoom the browser either ----
+    let wf = 1, wx = 0, wy = 0, wraf = 0;
+    window.addEventListener('wheel', (e) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      let dy = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1);
+      dy = Math.max(-60, Math.min(60, dy));          // a real mouse notch (100) must not jump 2.7x
+      wf *= Math.exp(-dy * 0.01);
+      wx = e.clientX; wy = e.clientY;
+      if (wraf) return;
+      wraf = requestAnimationFrame(() => {
+        wraf = 0;
+        const f = wf; wf = 1;
+        const a = anchor(wx, wy);
+        zoomAt((scale || 1) * f, a.px, a.py, wx, wy);
+      });
+    }, { passive: false });
+
+    // ---- iOS Safari ignores user-scalable=no: kill its page-zoom gestures ----
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach((n) =>
+      document.addEventListener(n, (e) => e.preventDefault(), { passive: false }));
+  }
+
   function setMode(m) {
     if (MODES.indexOf(m) < 0) return;
     mode = m;
@@ -287,6 +363,7 @@
     // Web fonts change toolbar button widths (and therefore its wrapping/height).
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { schedule(true); });
     window.addEventListener('load', function () { schedule(true); });
+      initGestures();
 
     // ---- Print: scale must be exactly 1 while the browser lays out the paper ----
     window.addEventListener('beforeprint', function () {

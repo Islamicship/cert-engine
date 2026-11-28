@@ -48,6 +48,7 @@
   const MAX_IMAGE_BYTES = 5 * 1024 * 1024;      // same cap as script.js uploads
   const BACKUP_APP = 'cert-engine';
   const APP_NAME = 'Certification Engine';
+  const APP_VERSION = '9.1.1';
 
   // Record defaults == the placeholder text in index.html. Used by "New Record".
   const DEFAULTS = {
@@ -2411,6 +2412,259 @@
   }
 
   /* ======================================================================
+   * 13b. Mobile chrome (<= 768px): app bar, off-canvas drawer, keyboard assist.
+   *      Drawer re-uses MENUS + buildList(): one source of truth, states via refreshStates().
+   * ====================================================================== */
+  const MQ_MOBILE = window.matchMedia('(max-width: 768px)');
+
+  function buildMobile() {
+    const header = q1('.app-header');
+    const top = q1('.ah-top');
+    const tray = q1('.ah-tray');
+    if (!header || !top || !tray) return;
+
+    const iconBtn = (cls, label, path) => {
+      const b = mk('button', 'tray-btn m-only ' + cls);
+      b.type = 'button';
+      b.title = label;
+      b.setAttribute('aria-label', label);
+      b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + path + '"/></svg>';   // static literal
+      return b;
+    };
+    const burger = iconBtn('m-burger', 'Menu', 'M4 6h16 M4 12h16 M4 18h16');
+    const undoB = iconBtn('m-undo', 'Undo', ICON_PATHS.undo);
+    const redoB = iconBtn('m-redo', 'Redo', ICON_PATHS.redo);
+    const printB = iconBtn('m-print', 'Print / Save as PDF', ICON_PATHS.print);
+    burger.setAttribute('aria-controls', 'm-drawer');
+    burger.setAttribute('aria-expanded', 'false');
+
+    undoB.addEventListener('click', undo);
+    redoB.addEventListener('click', redo);
+    printB.addEventListener('click', printWithGuard);
+    const mirror = () => { undoB.disabled = !canUndo(); redoB.disabled = !canRedo(); };
+    if (typeof MutationObserver === 'function') {
+      const mo = new MutationObserver(mirror);          // syncProp() already toggles pb.undo / pb.redo
+      [pb.undo, pb.redo].forEach((n) => { if (n) mo.observe(n, { attributes: true, attributeFilter: ['disabled'] }); });
+    }
+    mirror();
+
+    top.prepend(burger);
+    tray.prepend(undoB, redoB);
+    tray.append(printB);
+
+    // Required-fields chip = compact document indicator on mobile (touch has no tooltip to explain a disabled Save PDF)
+    const chipHome = $('propbar');
+    const placeChip = () => {
+      if (!ready.chip) return;
+      if (MQ_MOBILE.matches) top.insertBefore(ready.chip, tray);
+      else if (chipHome) chipHome.append(ready.chip);
+    };
+    placeChip();
+
+    // ---- Drawer ----
+    const svg = (d, f) => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + d + '"/>' + (f ? '<path d="' + f + '" fill="currentColor"/>' : '') + '</svg>';   // static literals only
+    const SEC_ICON = {
+      file:   'M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z M14 3v5h5 M9 13h6 M9 17h4',
+      edit:   'M4 21v-7 M4 10V3 M12 21v-9 M12 8V3 M20 21v-5 M20 12V3 M1 14h6 M9 8h6 M17 16h6',
+      view:   'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
+      data:   'M3 5a9 3 0 1 0 18 0 9 3 0 1 0-18 0 M21 12c0 1.66-4 3-9 3s-9-1.34-9-3 M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5',
+      help:   'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3 M12 17h.01',
+      layout: 'M12 2L2 7l10 5 10-5z M2 17l10 5 10-5 M2 12l10 5 10-5'
+    };
+    const THEME = {
+      auto:  { label: 'Auto',  d: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z', f: 'M12 3a9 9 0 0 1 0 18z' },
+      light: { label: 'Light', d: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z M12 2v2 M12 20v2 M4.9 4.9l1.4 1.4 M17.7 17.7l1.4 1.4 M2 12h2 M20 12h2 M4.9 19.1l1.4-1.4 M17.7 6.3l1.4-1.4' },
+      dark:  { label: 'Dark',  d: 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z' }
+    };
+
+    const back = mk('div', 'm-backdrop');
+    const drawer = mk('aside', 'm-drawer');
+    drawer.id = 'm-drawer';
+    drawer.setAttribute('aria-label', 'Menu');
+    drawer.inert = true;
+    const body = mk('div', 'm-drawer__body');
+
+    const SECTIONS = MENUS.concat([{ id: 'layout', label: 'Layout', items: [
+      { label: 'Unlock Layout Texts', tip: 'Titles, badges, disclaimer, ribbon',
+        check: () => { const b = $('lock-btn'); return !!b && b.getAttribute('aria-pressed') === 'true'; },
+        run: () => { const b = $('lock-btn'); if (b) b.click(); } }
+    ] }]);
+
+    // Accordion: collapsed panel is `inert` (no focus, no taps, hidden from screen readers) but stays
+    // rendered, so the grid-rows transition can run. `hidden` / display:none would kill the animation.
+    const OPEN_ON_ENTER = -1;   // -1 = sab sections band, 0 = File khula. Pehli load aur har re-open dono yahi use karte hain
+    const secs = [];
+    const setSec = (s, open) => {
+      s.panel.classList.toggle('is-open', open);
+      s.panel.inert = !open;
+      s.head.setAttribute('aria-expanded', String(open));
+    };
+
+    SECTIONS.forEach((m, i) => {
+      const wrap = mk('div', 'm-sec');
+      const head = mk('button', 'm-sec__h');
+      head.type = 'button';
+      head.id = 'm-sec-h-' + m.id;
+      const ico = mk('span', 'm-sec__ico');
+      ico.innerHTML = svg(SEC_ICON[m.id] || SEC_ICON.layout);
+      head.append(ico, mk('span', 'm-sec__t', m.label));
+
+      const panel = mk('div', 'm-sec__panel');
+      panel.id = 'm-sec-p-' + m.id;
+      head.setAttribute('aria-controls', panel.id);
+      const inner = mk('div', 'm-sec__inner');
+      const ul = mk('ul', 'mb-list m-list');
+      ul.setAttribute('role', 'menu');
+      ul.setAttribute('aria-labelledby', head.id);
+      buildList(m.items, ul);
+      inner.append(ul);
+      panel.append(inner);
+
+      const s = { head: head, panel: panel };
+      secs.push(s);
+      setSec(s, i === OPEN_ON_ENTER);
+      head.addEventListener('click', () => {
+        const willOpen = !panel.classList.contains('is-open');
+        secs.forEach((x) => setSec(x, false));
+        setSec(s, willOpen);
+      });
+      wrap.append(head, panel);
+      body.append(wrap);
+    });
+
+    // Footer dock: version + theme cycle. Delegates to the real #theme-btn so theme.js stays the single owner of theme state.
+    const docEl = document.documentElement;
+    const foot = mk('div', 'm-drawer__foot');
+    const info = mk('div', 'm-foot__info');
+    info.append(mk('span', 'm-foot__name', APP_NAME), mk('span', 'm-foot__ver', 'v' + APP_VERSION));
+    const themeB = mk('button', 'm-foot__theme');
+    themeB.type = 'button';
+    const themeIco = mk('span', 'm-foot__ico');
+    const themeTxt = mk('span', 'm-foot__txt');
+    themeB.append(themeIco, themeTxt);
+    const syncTheme = () => {
+      const t = THEME[docEl.getAttribute('data-theme-mode')] || THEME.auto;
+      themeIco.innerHTML = svg(t.d, t.f);
+      themeTxt.textContent = t.label;
+      themeB.setAttribute('aria-label', 'Theme: ' + t.label + '. Tap to change.');
+    };
+    themeB.addEventListener('click', () => {
+      const real = $('theme-btn');
+      if (real) real.click();
+      requestAnimationFrame(syncTheme);           // safety net if theme.js updates attributes async
+    });
+    if (typeof MutationObserver === 'function') {
+      new MutationObserver(syncTheme).observe(docEl, { attributes: true, attributeFilter: ['data-theme-mode', 'data-theme'] });
+    }
+    syncTheme();
+    foot.append(info, themeB);
+
+    const head = mk('div', 'm-drawer__head');
+    const closeB = mk('button', 'm-drawer__close');
+    closeB.type = 'button';
+    closeB.title = 'Close menu';
+    closeB.setAttribute('aria-label', 'Close menu');
+    closeB.innerHTML = svg('M6 6l12 12 M18 6L6 18');          // static literal
+    closeB.addEventListener('click', () => setDrawer(false));
+    head.append(mk('span', 'm-drawer__title', 'Menu'), closeB);
+    drawer.append(head, body, foot);
+
+    function setDrawer(open, viaKeyboard) {
+      if (open) {
+        refreshStates();
+        if (isTyping(document.activeElement)) document.activeElement.blur();   // drop the keyboard
+        // Accordion reset. Transitions band karke instant, taake slide-in ke dauran collapse animation nazar na aaye.
+        drawer.classList.add('is-reset');
+        secs.forEach((x, i) => setSec(x, i === OPEN_ON_ENTER));
+        void drawer.offsetWidth;                  // style flush while transitions are off
+        drawer.classList.remove('is-reset');
+      }
+      drawer.classList.toggle('is-open', open);
+      back.classList.toggle('is-open', open);
+      drawer.inert = !open;
+      burger.setAttribute('aria-expanded', String(open));
+      if (open) {
+        // Programmatic focus on a button shows :focus-visible ring on touch. Item pe focus sirf keyboard se kholne par.
+        drawer.tabIndex = -1;
+        const f = viaKeyboard ? drawer.querySelector('.m-sec__h') : null;
+        (f || drawer).focus({ preventScroll: true });
+      }
+    }
+
+    burger.addEventListener('click', (e) => setDrawer(!drawer.classList.contains('is-open'), e.detail === 0));
+
+    // Backdrop: direct listener (iOS needs it), click only (pointerdown => ghost click-through)
+    back.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); setDrawer(false); });
+
+    // Safety net: any tap outside drawer + burger closes it, and is swallowed (nothing underneath fires)
+    document.addEventListener('click', (e) => {
+      if (!drawer.classList.contains('is-open')) return;
+      if (drawer.contains(e.target) || burger.contains(e.target)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setDrawer(false);
+    }, true);
+
+    // Esc closes the drawer too (hardware keyboard / tablet)
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && drawer.classList.contains('is-open')) { e.preventDefault(); setDrawer(false); }
+    });
+
+    // buildList's own click handler (activate) runs first; this only closes the sheet afterwards
+    body.addEventListener('click', (e) => {
+      const b = e.target.closest('.mb-item');
+      if (b && !b.disabled && !b.hasAttribute('aria-haspopup')) setDrawer(false);
+    });
+    MQ_MOBILE.addEventListener('change', () => { if (!MQ_MOBILE.matches) setDrawer(false); placeChip(); });
+
+    header.append(back, drawer);
+  }
+
+  // Virtual keyboard: hide bottom bar (CSS .kb-open) and pan the active cell into the VISIBLE viewport.
+  function initKeyboardAssist() {
+    const root = document.documentElement;
+    const coarse = window.matchMedia('(pointer: coarse)');
+    const vv = window.visualViewport;
+    const CELL = '[contenteditable="true"], .combo-input';
+    const isCell = (t) => !!(t && t.closest && t.closest(CELL));
+    let cur = null;
+    let timer = 0;
+
+    function center() {
+      if (!cur || !cur.isConnected || !isCell(document.activeElement)) return;
+      const r = cur.getBoundingClientRect();
+      const vt = vv ? vv.offsetTop : 0;
+      const vh = vv ? vv.height : window.innerHeight;
+      const dy = (r.top + r.height / 2) - (vt + vh / 2);
+      if (Math.abs(dy) > 6) window.scrollBy({ top: dy, behavior: 'smooth' });
+      const vp = $('viewport');
+      if (vp && vp.scrollWidth > vp.clientWidth + 1) {          // zoomed in: cell may be off-screen horizontally
+        const vl = vv ? vv.offsetLeft : 0;
+        const vw = vv ? vv.width : window.innerWidth;
+        vp.scrollLeft += (r.left + r.width / 2) - (vl + vw / 2);
+      }
+    }
+
+    document.addEventListener('focusin', (e) => {
+      if (!coarse.matches || !isCell(e.target)) return;
+      cur = e.target.closest(CELL);
+      root.classList.add('kb-open');
+      clearTimeout(timer);
+      timer = setTimeout(center, 350);          // fallback: not every browser fires visualViewport resize
+    });
+    document.addEventListener('focusout', () => {
+      setTimeout(() => {                        // Tab between cells: focus returns within a tick, bar must not flicker
+        if (!isCell(document.activeElement)) { root.classList.remove('kb-open'); cur = null; }
+      }, 60);
+    });
+    if (vv) vv.addEventListener('resize', () => {
+      if (!cur) return;
+      clearTimeout(timer);
+      timer = setTimeout(center, 80);
+    });
+  }
+
+  /* ======================================================================
    * 14. Init
    * ====================================================================== */
   // Publishes the REAL header height (it wraps on narrow screens, so a hard-coded 82px would be wrong)
@@ -2435,6 +2689,8 @@
     initShortcuts();
     initAudit();
     trackEditable();
+    try { buildMobile(); initKeyboardAssist(); }
+    catch (err) { console.error('[menu-tools] mobile chrome failed', err); }
 
     // capture phase: runs even if a handler stops propagation; debounced, so it records AFTER script.js normalised.
     document.addEventListener('input', scheduleRecord, true);

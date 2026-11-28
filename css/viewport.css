@@ -75,6 +75,16 @@
 }
 
 
+    /* Browser may pan with 1 finger but never pinch/double-tap zoom. Pinch belongs to viewport.js.
+       NOT "none": that would kill native scrolling. #viewport is listed because in zoom mode it is the scroll container. */
+    html,
+    body,
+    #viewport,
+    #stage {
+      touch-action: pan-x pan-y;
+    }
+
+
 /* ================= PRINT: HARD RESET =================
    The paper must see EXACTLY the original document structure: two inert wrapper
    <div>s, no transform, no offset, no padding. `!important` beats the inline
