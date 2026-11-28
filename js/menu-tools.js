@@ -48,7 +48,7 @@
   const MAX_IMAGE_BYTES = 5 * 1024 * 1024;      // same cap as script.js uploads
   const BACKUP_APP = 'cert-engine';
   const APP_NAME = 'Certification Engine';
-  const APP_VERSION = '9.2.2';
+  const APP_VERSION = '9.2.5';
 
   // Record defaults == the placeholder text in index.html. Used by "New Record".
   const DEFAULTS = {
