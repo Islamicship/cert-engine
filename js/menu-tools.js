@@ -48,7 +48,7 @@
   const MAX_IMAGE_BYTES = 5 * 1024 * 1024;      // same cap as script.js uploads
   const BACKUP_APP = 'cert-engine';
   const APP_NAME = 'Certification Engine';
-  const APP_VERSION = '9.1.1';
+  const APP_VERSION = '9.1.2';
 
   // Record defaults == the placeholder text in index.html. Used by "New Record".
   const DEFAULTS = {
@@ -2598,6 +2598,7 @@
 
     // Safety net: any tap outside drawer + burger closes it, and is swallowed (nothing underneath fires)
     document.addEventListener('click', (e) => {
+      if (!e.isTrusted) return;                 // script-fired clicks (e.g. real.click() for theme) are not user taps
       if (!drawer.classList.contains('is-open')) return;
       if (drawer.contains(e.target) || burger.contains(e.target)) return;
       e.preventDefault();
