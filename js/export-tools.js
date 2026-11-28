@@ -54,6 +54,7 @@
     '.upload.is-locked::after{content:none!important;display:none!important}' +
     '.invalid{box-shadow:none!important}' +
     '[data-placeholder]::before{content:""!important;display:none!important}' +
+    '.no-print{display:none!important}' +
     '.combo-btn,.combo-menu{display:none!important}' +
     '.combo-input{-webkit-appearance:none!important;appearance:none!important;border:none!important;' +
       'background:transparent!important;box-shadow:none!important}';
