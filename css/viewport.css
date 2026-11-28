@@ -30,7 +30,9 @@
   /* Reserve the vertical scrollbar gutter permanently. Otherwise the scaled
      page can make a scrollbar appear/disappear, changing the available width,
      changing the scale again... (resize feedback loop). */
-  html { scrollbar-gutter: stable; }
+  html {
+    scrollbar-gutter: stable;
+  }
 
 
   /* ================= VIEWPORT (scroll area) ================= */
@@ -39,50 +41,78 @@
     width: 100%;
     padding: 20px 24px 40px;
   }
+
   /* "100%" mode may be wider than the screen: allow horizontal panning there only.
      (overflow-x:auto would also clip the page shadow, so it is limited to this mode.) */
-  #viewport[data-mode="actual"] { overflow-x: auto; }
+  #viewport[data-mode="actual"] {
+    overflow-x: auto;
+  }
 
   /* Phones / small tablets: smaller, touch-friendly gutters */
   @media (max-width: 820px) {
-    #viewport { padding: 12px 12px 28px; }
+    #viewport {
+      padding: 12px 12px 28px;
+    }
   }
 
 
   /* ================= STAGE ================= */
   #stage {
     position: relative;
-    margin: 0 auto;     /* desktop: horizontally centred */
+    margin: 0 auto;
+    /* desktop: horizontally centred */
   }
 
   /* Page inside the stage. `.vp-ready` is added by viewport.js in the SAME frame in
      which it sizes the stage, so the page never renders absolutely positioned inside an
      unsized (0-height) stage. Before that, the page simply stays in normal flow. */
-  .vp-ready #stage > .page {
+  .vp-ready #stage>.page {
     position: absolute;
     top: 0;
     left: 0;
-    margin: 0;                 /* overrides style.css .page { margin: 4mm auto 8mm } */
-    transform-origin: 0 0;     /* scale from the top-left, matches stage origin */
+    margin: 0;
+    /* overrides style.css .page { margin: 4mm auto 8mm } */
+    transform-origin: 0 0;
+    /* scale from the top-left, matches stage origin */
   }
-  #stage > .page { margin: 0; }
+
+  #stage>.page {
+    margin: 0;
+  }
 
   /* No flash of an unscaled page: hide the stage until the first scale is applied.
      The `.js` class is set by the inline bootstrap in <head>. `.vp-failsafe`
      (added after 2.5s by the same bootstrap) un-hides it if viewport.js never loads,
      so a failed script can never leave a blank screen. */
-  .js:not(.vp-ready):not(.vp-failsafe) #stage { visibility: hidden; }
+  .js:not(.vp-ready):not(.vp-failsafe) #stage {
+    visibility: hidden;
+  }
+
+  /* Mobile paper elevation. Stage = visual page box, isliye shadow exact fit hoga. Screen only. */
+  @media (max-width: 768px) {
+    #stage {
+      border-radius: 4px;
+      overflow: clip;
+      box-shadow: 0 10px 30px -5px rgba(0, 0, 0, .35), 0 0 0 1px rgba(255, 255, 255, .05);
+    }
+
+    #stage>.page {
+      box-shadow: none;
+    }
+
+    /* style.css ka apna shadow ho to double shadow na bane */
+  }
 }
 
 
-    /* Browser may pan with 1 finger but never pinch/double-tap zoom. Pinch belongs to viewport.js.
+/* Browser may pan with 1 finger but never pinch/double-tap zoom. Pinch belongs to viewport.js.
        NOT "none": that would kill native scrolling. #viewport is listed because in zoom mode it is the scroll container. */
-    html,
-    body,
-    #viewport,
-    #stage {
-      touch-action: pan-x pan-y;
-    }
+html,
+body,
+#viewport,
+#stage {
+  touch-action: pan-x pan-y;
+}
 
 
 /* ================= PRINT: HARD RESET =================
@@ -92,7 +122,9 @@
    (A transformed ancestor would also turn the print-only `position: fixed` ribbon
    into a box relative to that ancestor instead of the paper edge.) */
 @media print {
-  html { scrollbar-gutter: auto; }
+  html {
+    scrollbar-gutter: auto;
+  }
 
   #viewport {
     display: block !important;
@@ -103,6 +135,7 @@
     overflow: visible !important;
     transform: none !important;
   }
+
   #stage {
     position: static !important;
     width: auto !important;
@@ -111,8 +144,9 @@
     transform: none !important;
     visibility: visible !important;
   }
-  #stage > .page,
-  .vp-ready #stage > .page {
+
+  #stage>.page,
+  .vp-ready #stage>.page {
     position: static !important;
     top: auto !important;
     left: auto !important;

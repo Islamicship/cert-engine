@@ -60,6 +60,10 @@
   const toolbar = document.querySelector('.toolbar');
   const fitBtn = document.getElementById('fit-btn');
 
+  /** Phone: persisted desktop mode kabhi nahi padhna, apna mode kabhi persist nahi karna. */
+  const MQ_MOBILE = window.matchMedia ? window.matchMedia('(max-width: 768px)') : null;
+  const isMobile = () => !!(MQ_MOBILE && MQ_MOBILE.matches);
+
   if (!viewport || !stage || !page) return;   // markup missing: leave the page as it was
 
   let mode = 'width';
@@ -76,6 +80,7 @@
    * @returns {'width'|'page'|'actual'}
    */
   function readMode() {
+    if (isMobile()) return 'width';
     try {
       const v = localStorage.getItem(MODE_KEY);
       return MODES.indexOf(v) >= 0 ? v : 'width';
@@ -90,6 +95,7 @@
    * @returns {void}
    */
   function writeMode(m) {
+    if (isMobile()) return;
     try { localStorage.setItem(MODE_KEY, m); } catch (_) { /* storage unavailable */ }
   }
 
@@ -200,6 +206,8 @@
     if (!forced && isEditing() && Math.abs(m.availW - lastAvailW) < 1) return;
     lastAvailW = m.availW;
 
+    // Mobile: pinch-out fit-width tak pohonche to 'width' mode mein snap back (postage-stamp zoom band)
+    if (mode === 'zoom' && isMobile() && zoomFactor <= (m.availW / m.baseW) + 0.001) { mode = 'width'; renderButton(); }
     const next = computeScale(m, mode);
     if (!forced && Math.abs(next - scale) < EPSILON && root.classList.contains('vp-ready')) return;
 
@@ -335,6 +343,29 @@
     schedule(true);
   }
 
+  /** Mobile toggle: Fit Width <-> Edit Zoom (2x fit-width, max 100%), screen centre anchored. */
+  function toggleEditZoom() {
+    const m = measure();
+    if (!m) return;
+    const fitW = Math.min(MAX_SCALE, m.availW / m.baseW);
+    if (mode !== 'width') {
+      setMode('width');
+      viewport.scrollLeft = 0;
+      return;
+    }
+    const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+    const r = stage.getBoundingClientRect();
+    zoomAt(Math.min(MAX_SCALE, fitW * 2), (cx - r.left) / scale, (cy - r.top) / scale, cx, cy);
+  }
+
+  /** Breakpoint cross (rotate / resize / devtools): zoom reset, mode dobara decide. */
+  function onBreakpoint() {
+    zoomFactor = 1;
+    mode = readMode();
+    renderButton();
+    schedule(true);
+  }
+
   /**
    * @description Entry point: first synchronous layout, observers, print hooks.
    * @returns {void}
@@ -353,6 +384,10 @@
     window.addEventListener('resize', function () { schedule(false); });
     window.addEventListener('orientationchange', function () { schedule(true); });
     window.addEventListener('pageshow', function () { schedule(true); });   // bfcache restore
+    if (MQ_MOBILE) {
+      if (MQ_MOBILE.addEventListener) MQ_MOBILE.addEventListener('change', onBreakpoint);
+      else if (MQ_MOBILE.addListener) MQ_MOBILE.addListener(onBreakpoint);
+    }
 
     if (typeof ResizeObserver === 'function') {
       const ro = new ResizeObserver(function () { schedule(false); });
@@ -390,6 +425,7 @@
   getMode: function () { return mode; },
   setMode: setMode,
   setZoom: setZoom,           // <-- Add this line
+  toggleEditZoom: toggleEditZoom,
   getScale: function () { return scale; },
   refresh: function () { schedule(true); }
 };

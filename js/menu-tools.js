@@ -48,7 +48,7 @@
   const MAX_IMAGE_BYTES = 5 * 1024 * 1024;      // same cap as script.js uploads
   const BACKUP_APP = 'cert-engine';
   const APP_NAME = 'Certification Engine';
-  const APP_VERSION = '9.1.2';
+  const APP_VERSION = '9.2.2';
 
   // Record defaults == the placeholder text in index.html. Used by "New Record".
   const DEFAULTS = {
@@ -750,7 +750,7 @@
       if (ed) lastEd = ed;
     });
     document.addEventListener('mousedown', (e) => {
-      const keep = e.target.closest && e.target.closest('[contenteditable="true"], .app-header, .mt-find, dialog, .floating-palette, .mt-case-pop');
+      const keep = e.target.closest && e.target.closest('[contenteditable="true"], .app-header, .mt-find, dialog, .floating-palette, .m-dock, .mt-case-pop');
       if (!keep) lastEd = null;
     }, true);
   }
@@ -2666,6 +2666,113 @@
   }
 
   /* ======================================================================
+   * 13c. Mobile bottom dock (<= 768px): Zoom toggle, Next field, Image upload, PDF.
+   *      #floating-palette CSS se hide hota hai; yeh uski jagah leta hai.
+   * ====================================================================== */
+  const PENCIL = 'M12 20h9 M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z';
+
+  // Agla field: pehle missing REQUIRED (document order mein current ke baad), warna simple next cell.
+  function nextField() {
+    const cells = findTargets();
+    if (!cells.length) return;
+    const a = document.activeElement;
+    let i = cells.findIndex((c) => c === a || c.contains(a));
+    if (i < 0 && lastEd && lastEd.el.isConnected) i = cells.findIndex((c) => c === lastEd.el);
+    const order = cells.slice(i + 1).concat(cells.slice(0, i + 1));
+    const rest = i >= 0 ? order.slice(0, -1) : order;     // current cell ko skip
+    if (!rest.length) return;
+    const miss = missingRequired().flatMap((r) => r.nodes()).filter(Boolean);
+    const el = rest.find((c) => miss.some((n) => n === c || n.contains(c))) || rest[0];
+    try { el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' }); } catch (_) { /* ignore */ }
+    try { el.focus({ preventScroll: true }); } catch (_) { /* ignore */ }
+    if (el.isContentEditable) selectContents(el);
+    else if (el.select) el.select();
+  }
+
+  // pickFile() ko user gesture ke SYNC path mein call karna zaroori hai (iOS), isliye pehle await se pehle hi.
+  async function uploadTo(boxId) {
+    const box = $(boxId);
+    if (!box || typeof box._loadFile !== 'function') { toast('Upload is not ready yet'); return; }
+    if (box.classList.contains('is-locked')) { toast('Box is locked: unlock Layout from the menu first'); return; }
+    const f = await pickFile('image/*');
+    if (f) box._loadFile(f);                              // size/type rules script.js ke apne hain
+  }
+
+  function openUploadSheet() {
+    const dlg = mk('dialog', 'mt-modal no-print');
+    dlg.setAttribute('aria-label', 'Upload image');
+    const photo = mk('button', '', 'Photo');
+    const logo = mk('button', 'ghost', 'Logo');
+    const cancel = mk('button', 'ghost', 'Cancel');
+    [photo, logo, cancel].forEach((b) => { b.type = 'button'; });
+    const row = mk('div', 'mt-modal__actions');
+    row.append(cancel, logo, photo);
+    dlg.append(mk('h2', 'mt-modal__title', 'Upload image'), mk('p', 'mt-modal__text', 'Which image do you want to replace?'), row);
+    photo.addEventListener('click', () => { dlg.close(); uploadTo('photo-box'); });
+    logo.addEventListener('click', () => { dlg.close(); uploadTo('logo-box'); });
+    cancel.addEventListener('click', () => dlg.close());
+    dlg.addEventListener('close', () => dlg.remove());
+    document.body.appendChild(dlg);
+    dlg.showModal();
+  }
+
+  const exportFromDock = () => (window.CertExport ? exportAs('pdf') : printWithGuard());
+
+  function buildDock() {
+    if ($('m-dock')) return;
+    const svg = (d) => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + d + '"/></svg>';   // static literals only
+    const dock = mk('nav', 'm-dock no-print');
+    dock.id = 'm-dock';
+    dock.setAttribute('aria-label', 'Quick actions');
+    // Header jaisa: button mouse-down par focus nahi chheenta, cell ka focus + selection bacha rehta hai (Next field ko chahiye)
+    dock.addEventListener('mousedown', (e) => { if (e.target.closest('button')) e.preventDefault(); });
+
+    const defs = [
+      { id: 'view', label: 'Zoom', path: ICON_PATHS.zoomin, run: () => { const vp = V(); if (vp && vp.toggleEditZoom) vp.toggleEditZoom(); } },
+      { id: 'next', label: 'Next', path: PENCIL, run: nextField },
+      { id: 'media', label: 'Image', path: ICON_PATHS.image, run: openUploadSheet },
+      { id: 'export', label: 'PDF', path: ICON_PATHS.pdf, run: exportFromDock, primary: true }
+    ];
+    const btns = {};
+    defs.forEach((d) => {
+      const b = mk('button', 'm-dock__btn' + (d.primary ? ' m-dock__btn--primary' : ''));
+      b.type = 'button';
+      b.id = 'm-dock-' + d.id;
+      b.setAttribute('aria-label', d.label);
+      b.innerHTML = svg(d.path);
+      b.append(mk('span', 'm-dock__lbl', d.label));
+      b.addEventListener('click', () => {
+        const fail = (err) => { console.error('[dock]', err); toast('Action failed'); };
+        try { const r = d.run(); if (r && typeof r.catch === 'function') r.catch(fail); } catch (err) { fail(err); }
+      });
+      dock.append(b);
+      btns[d.id] = b;
+    });
+    document.body.appendChild(dock);
+
+    let last = null;
+    const syncView = () => {
+      const vp = V();
+      if (!vp) return;
+      const zoomed = vp.getMode() !== 'width';
+      if (zoomed === last) return;
+      last = zoomed;
+      const b = btns.view;
+      b.setAttribute('aria-pressed', String(zoomed));
+      b.setAttribute('aria-label', zoomed ? 'Fit to width' : 'Zoom in for editing');
+      b.firstElementChild.innerHTML = '<path d="' + (zoomed ? ICON_PATHS.zoomout : ICON_PATHS.zoomin) + '"/>';   // static literal
+      b.lastElementChild.textContent = zoomed ? 'Fit' : 'Zoom';
+    };
+    syncView();
+    if (typeof MutationObserver === 'function') {
+      const mo = new MutationObserver(syncView);
+      mo.observe(document.documentElement, { attributes: true, attributeFilter: ['style'] });
+      const vpEl = $('viewport');
+      if (vpEl) mo.observe(vpEl, { attributes: true, attributeFilter: ['data-mode'] });
+    }
+  }
+
+  /* ======================================================================
    * 14. Init
    * ====================================================================== */
   // Publishes the REAL header height (it wraps on narrow screens, so a hard-coded 82px would be wrong)
@@ -2690,6 +2797,7 @@
     initShortcuts();
     initAudit();
     trackEditable();
+    try { buildDock(); } catch (err) { console.error('[menu-tools] dock failed', err); }
     try { buildMobile(); initKeyboardAssist(); }
     catch (err) { console.error('[menu-tools] mobile chrome failed', err); }
 
